@@ -10,6 +10,7 @@ import (
 	"github.com/sploders101/personal-website/cmd/webserver/config"
 	"github.com/sploders101/personal-website/cmd/webserver/dbapi"
 	"github.com/sploders101/personal-website/cmd/webserver/ht"
+	"github.com/sploders101/personal-website/cmd/webserver/postfeeds"
 	"github.com/sploders101/personal-website/cmd/webserver/storage"
 	"github.com/sploders101/personal-website/cmd/webserver/userdata"
 	"github.com/sploders101/personal-website/internal/env"
@@ -24,6 +25,10 @@ func makeWebRouter(ctx context.Context, cfg config.ServerConfig, db dbapi.Db, st
 	webRouter := http.NewServeMux()
 	webRouter.Handle("GET /", ht.ServeAssets(cfg, db))
 	webRouter.Handle("GET /{$}", mw(ht.ServeHome(cfg)))
+
+	webRouter.Handle("GET /feeds/rss", postfeeds.ServeRSS(ctx, cfg, db))
+	webRouter.Handle("GET /feeds/atom", postfeeds.ServeAtom(ctx, cfg, db))
+	webRouter.Handle("GET /feeds/json", postfeeds.ServeJSON(ctx, cfg, db))
 
 	webRouter.Handle("GET /posts/{$}", mw(ht.ServePostFeed(cfg, db)))
 	webRouter.Handle("GET /posts/{slug}/{$}", ht.ServePost(cfg, db))

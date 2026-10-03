@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html class="{{.DailyTheme}} eye-candy">
   <head>
-    <title>Layers Beneath</title>
+    <title>{{.Config.SiteSettings.Title}}</title>
     {{ template "globalhead" . }}
-    <meta name="description" content="In which I showcase my projects & deep-dive into technical concepts.">
+    <meta name="description" content="{{.Config.SiteSettings.Description}}">
   </head>
   <body class="flex column nowrap center">
     <div class="contentbox-container margin-auto">
@@ -17,7 +17,7 @@
           </div>
           {{ template "nav" . }}
           <main>
-            <h1>Layers Beneath</h1>
+            <h1>{{.Config.SiteSettings.Title}}</h1>
             <p>
               This site is currently under construction. This is where I will post
               things I've done, tutorials, technical deep-dives, and more. The name
@@ -35,13 +35,18 @@
               that break large systems down into smaller, bite-sized pieces that are
               easy for anyone to grasp.
             </p>
+            <p>
+              NOTICE: My first post is out! Check it out by clicking &quot;Posts&quot;
+              at the top of the page!
+            </p>
             <h2>Coming soon:</h2>
             <ul>
               <li>Blog</li>
               <ul>
-                <li>HTML</li>
-                <li>RSS Feed</li>
-                <li>Atom Feed</li>
+                <li>HTML (Done)</li>
+                <li>RSS Feed (Done)</li>
+                <li>Atom Feed (Done)</li>
+                <li>SSH/Telnet Server</li>
               </ul>
               <li>IRC Server</li>
               <li>P2P File Sharing</li>

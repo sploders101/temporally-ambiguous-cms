@@ -44,6 +44,7 @@ INNER JOIN articles__revisions ar ON ar.article_id = a.id
 WHERE
     a.slug = $1
     AND ar.published_at IS NOT NULL
+    AND ar.published_at <= now()
 ORDER BY ar.published_at DESC
 LIMIT 1;
 
@@ -94,7 +95,8 @@ LIMIT 1;
 WITH latest_revisions AS (
     SELECT
         a.id AS article_id,
-        MAX(ar.published_at) AS latest_publish
+        MAX(ar.published_at) AS latest_publish,
+        MIN(ar.published_at) AS oldest_publish
     FROM articles a
     INNER JOIN articles__revisions ar ON a.id = ar.article_id
     WHERE
@@ -104,7 +106,8 @@ WITH latest_revisions AS (
 )
 SELECT
     sqlc.embed(a),
-    sqlc.embed(ar)
+    sqlc.embed(ar),
+    CAST(lr.oldest_publish AS TIMESTAMPTZ) AS original_publish
 FROM articles a
 INNER JOIN latest_revisions lr ON a.id = lr.article_id
 INNER JOIN articles__revisions ar ON

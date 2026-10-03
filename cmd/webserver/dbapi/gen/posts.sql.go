@@ -8,6 +8,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -69,7 +70,8 @@ const getArticleFeed = `-- name: GetArticleFeed :many
 WITH latest_revisions AS (
     SELECT
         a.id AS article_id,
-        MAX(ar.published_at) AS latest_publish
+        MAX(ar.published_at) AS latest_publish,
+        MIN(ar.published_at) AS oldest_publish
     FROM articles a
     INNER JOIN articles__revisions ar ON a.id = ar.article_id
     WHERE
@@ -79,7 +81,8 @@ WITH latest_revisions AS (
 )
 SELECT
     a.id, a.author, a.slug,
-    ar.id, ar.public_id, ar.article_id, ar.title, ar.description, ar.body, ar.created_at, ar.published_at
+    ar.id, ar.public_id, ar.article_id, ar.title, ar.description, ar.body, ar.created_at, ar.published_at,
+    CAST(lr.oldest_publish AS TIMESTAMPTZ) AS original_publish
 FROM articles a
 INNER JOIN latest_revisions lr ON a.id = lr.article_id
 INNER JOIN articles__revisions ar ON
@@ -99,6 +102,7 @@ type GetArticleFeedParams struct {
 type GetArticleFeedRow struct {
 	Article          Article
 	ArticlesRevision ArticlesRevision
+	OriginalPublish  time.Time
 }
 
 func (q *Queries) GetArticleFeed(ctx context.Context, arg GetArticleFeedParams) ([]GetArticleFeedRow, error) {
@@ -122,6 +126,7 @@ func (q *Queries) GetArticleFeed(ctx context.Context, arg GetArticleFeedParams) 
 			&i.ArticlesRevision.Body,
 			&i.ArticlesRevision.CreatedAt,
 			&i.ArticlesRevision.PublishedAt,
+			&i.OriginalPublish,
 		); err != nil {
 			return nil, err
 		}
@@ -244,6 +249,7 @@ INNER JOIN articles__revisions ar ON ar.article_id = a.id
 WHERE
     a.slug = $1
     AND ar.published_at IS NOT NULL
+    AND ar.published_at <= now()
 ORDER BY ar.published_at DESC
 LIMIT 1
 `

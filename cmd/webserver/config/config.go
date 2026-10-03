@@ -18,10 +18,23 @@ const (
 
 type ServerConfig struct {
 	BaseUrl        string               `mapstructure:"base_url"`
+	SiteSettings   SiteSettings         `mapstructure:"site_settings"`
 	Authentication AuthenticationConfig `mapstructure:"authentication"`
 	Database       DatabaseConfig       `mapstructure:"database"`
 	Storage        StorageBackend       `mapstructure:"storage"`
 	Secrets        SecretConfig         `mapstructure:"secrets"`
+}
+
+type SiteSettings struct {
+	ImagePath   string     `mapstructure:"image_path"`
+	Title       string     `mapstructure:"title"`
+	ShortTitle  string     `mapstructure:"short_title"`
+	Description string     `mapstructure:"description"`
+	Author      SiteAuthor `mapstructure:"author"`
+}
+type SiteAuthor struct {
+	Name  string `mapstructure:"name"`
+	Email string `mapstructure:"email"`
 }
 
 type DatabaseConfig struct {
@@ -77,6 +90,9 @@ func Load(path string) (ServerConfig, error) {
 
 	if cfg.BaseUrl == "" {
 		slog.Warn("Missing base_url from config. Some features may not work properly.")
+	}
+	if cfg.SiteSettings.ShortTitle == "" {
+		cfg.SiteSettings.ShortTitle = cfg.SiteSettings.Title
 	}
 	if cfg.Authentication.Local.Enabled {
 		slog.Warn("Local authentication not yet implemented. Please use OIDC.")

@@ -67,7 +67,9 @@ CREATE TABLE articles__tags(
 CREATE TABLE articles__revisions__assets(
     revision_id BIGINT NOT NULL REFERENCES articles__revisions(id) ON DELETE CASCADE,
     sha512_hash BYTEA NOT NULL, -- Not a foreign key because this row may be created first.
-    file_name TEXT NOT NULL
+    file_name TEXT NOT NULL,
+
+    UNIQUE (revision_id, file_name)
 );
 
 CREATE TABLE assets(

@@ -2,8 +2,8 @@
 <nav>
   <a class="{{if eq .Path "/"}}active{{end}}" href="/">Home</a>
   <a class="{{if hasPrefix .Path "/posts/"}}active{{end}}" href="/posts/" class="active">Posts</a>
-  <a class="{{if hasPrefix .Path "/projects/"}}active{{end}}" href="/projects/" class="active">Projects</a>
-  <a class="{{if hasPrefix .Path "/about/"}}active{{end}}" href="/about/" class="active">About</a>
+  <!-- <a class="{{if hasPrefix .Path "/projects/"}}active{{end}}" href="/projects/" class="active">Projects</a> -->
+  <!-- <a class="{{if hasPrefix .Path "/about/"}}active{{end}}" href="/about/" class="active">About</a> -->
   <div class="spacer"></div>
   {{if eq .User.Username ""}}
   <a class="{{if hasPrefix .Path "/login/"}}active{{end}}" href="/login/" class="active">Login</a>
