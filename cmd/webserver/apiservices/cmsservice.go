@@ -325,6 +325,23 @@ func (cms CmsService) PublishArticle(
 		return nil, ErrPermissionDenied
 	}
 
+	// Check that we have all the necessary assets first
+	missingAssets, err := tx.Query().GetMissingArticleAssetsByUuid(ctx, revisionId)
+	if err != nil {
+		slog.Error("Failed to query missing article assets", "error", err)
+		return nil, ErrAmbiguousInternal
+	}
+	if len(missingAssets) != 0 {
+		missingAssetNames := make([]string, len(missingAssets))
+		for i, asset := range missingAssets {
+			missingAssetNames[i] = asset.FileName
+		}
+		return nil, connect.NewError(
+			connect.CodeFailedPrecondition,
+			fmt.Errorf("missing assets: %v", missingAssetNames),
+		)
+	}
+
 	if err := tx.Query().PublishArticleRevision(ctx, queries.PublishArticleRevisionParams{
 		PublicID:    revisionId,
 		PublishedAt: sql.NullTime{Valid: true, Time: time.Now()},

@@ -240,6 +240,42 @@ func (q *Queries) GetMissingArticleAssets(ctx context.Context, revisionID int64)
 	return items, nil
 }
 
+const getMissingArticleAssetsByUuid = `-- name: GetMissingArticleAssetsByUuid :many
+SELECT ara.revision_id, ara.sha512_hash, ara.file_name
+FROM articles__revisions__assets ara
+INNER JOIN articles__revisions ar ON ar.id = ara.revision_id
+WHERE
+    ar.public_id = $1
+    AND NOT EXISTS (
+        SELECT 1
+        FROM assets
+        WHERE assets.sha512_hash = ara.sha512_hash
+    )
+`
+
+func (q *Queries) GetMissingArticleAssetsByUuid(ctx context.Context, publicID uuid.UUID) ([]ArticlesRevisionsAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getMissingArticleAssetsByUuid, publicID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ArticlesRevisionsAsset
+	for rows.Next() {
+		var i ArticlesRevisionsAsset
+		if err := rows.Scan(&i.RevisionID, &i.Sha512Hash, &i.FileName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPublishedRevisionBySlug = `-- name: GetPublishedRevisionBySlug :one
 SELECT
     a.id, a.author, a.slug,

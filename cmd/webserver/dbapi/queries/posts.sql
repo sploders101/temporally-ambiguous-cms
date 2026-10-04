@@ -78,6 +78,18 @@ WHERE
         WHERE assets.sha512_hash = ara.sha512_hash
     );
 
+-- name: GetMissingArticleAssetsByUuid :many
+SELECT ara.*
+FROM articles__revisions__assets ara
+INNER JOIN articles__revisions ar ON ar.id = ara.revision_id
+WHERE
+    ar.public_id = $1
+    AND NOT EXISTS (
+        SELECT 1
+        FROM assets
+        WHERE assets.sha512_hash = ara.sha512_hash
+    );
+
 -- name: GetAsset :one
 SELECT assets.*
 FROM assets
