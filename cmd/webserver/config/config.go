@@ -44,7 +44,7 @@ type DatabaseConfig struct {
 
 type StorageBackend struct {
 	S3      *S3Config      `mapstructure:"s3"`
-	LocalFS *LocalFSConfig `mapstructure:"localfiles"`
+	LocalFS *LocalFSConfig `mapstructure:"local_fs"`
 }
 
 // S3Config configures an S3-compatible storage backend.
