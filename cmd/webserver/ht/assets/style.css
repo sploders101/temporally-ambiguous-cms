@@ -13,7 +13,8 @@ html {
   color: var(--text-color);
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
 }
@@ -49,12 +50,15 @@ nav > a {
   color: var(--secondary-color);
 }
 .eye-candy nav > a {
-  background-clip: text;
-  background-image: repeating-linear-gradient(transparent 0px 0px, var(--secondary-color) 1px 1px, transparent 2px 2px);
-  color: transparent;
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3) 0px,
+    rgba(0, 0, 0, 1) 2px,
+    rgba(0, 0, 0, 0.3) 4px
+  );
 
-  animation-name: tiledown2px;
-  animation-duration: 2s;
+  animation-name: tiledown-mask-4px;
+  animation-duration: 1s;
   animation-direction: normal;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
@@ -71,14 +75,24 @@ nav > a.active {
   border: 1px solid var(--secondary-color);
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin: 0;
   text-decoration: underline;
   font-family: "Bruno Ace", sans-serif;
   font-weight: 400;
   font-style: normal;
 }
-h1:first-child, h2:first-child, h3:first-child, h4:first-child, h5:first-child, h6:first-child {
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child,
+h5:first-child,
+h6:first-child {
   margin-top: 0;
 }
 p {
@@ -96,12 +110,15 @@ label {
   color: var(--secondary-color);
 }
 .eye-candy label {
-  background-clip: text;
-  background-image: repeating-linear-gradient(transparent 0px 0px, var(--secondary-color) 1px 1px, transparent 2px 2px);
-  color: transparent;
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3) 0px,
+    rgba(0, 0, 0, 1) 2px,
+    rgba(0, 0, 0, 0.3) 4px
+  );
 
-  animation-name: tiledown2px;
-  animation-duration: 2s;
+  animation-name: tiledown-mask-4px;
+  animation-duration: 1s;
   animation-direction: normal;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
@@ -119,32 +136,35 @@ div.textbox-wrapper {
   display: flex;
   flex-flow: column nowrap;
   align-items: stretch;
+  border: 1px solid var(--input-color);
+  border-radius: 3px;
 }
 div.textbox-wrapper input {
   all: unset;
+  caret-color: var(--input-placeholder-color);
   cursor: text;
-  border: 1px solid var(--input-color);
   height: 100%;
   padding: 6px;
   padding-left: 11px;
-  border-radius: 3px;
   color: var(--input-color);
 }
 .eye-candy div.textbox-wrapper input {
-  caret-color: var(--input-placeholder-color);
-  background-clip: text;
-  background-image: repeating-linear-gradient(transparent 0px 0px, var(--input-color) 1px 1px, transparent 2px 2px);
-  color: transparent;
+  mask-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3) 0px,
+    rgba(0, 0, 0, 1) 2px,
+    rgba(0, 0, 0, 0.3) 4px
+  );
 
-  animation-name: tiledown2px;
-  animation-duration: 2s;
+  animation-name: tiledown-mask-4px;
+  animation-duration: 1s;
   animation-direction: normal;
   animation-iteration-count: infinite;
   animation-timing-function: linear;
 }
 div.textbox-wrapper::before {
   width: 2px;
-  content: '';
+  content: "";
   display: inline-block;
   background: var(--input-decoration);
   position: absolute;
@@ -160,7 +180,9 @@ div.textbox-wrapper::before {
 }
 
 /* Button styles */
-input[type="submit"], button, a.button {
+input[type="submit"],
+button,
+a.button {
   all: unset;
 
   display: inline-block;
@@ -175,7 +197,9 @@ input[type="submit"], button, a.button {
 
   text-align: center;
 }
-.eye-candy input[type="submit"], .eye-candy button, .eye-candy a.button {
+.eye-candy input[type="submit"],
+.eye-candy button,
+.eye-candy a.button {
   animation-name: tiledown8px;
   animation-duration: 4s;
   animation-direction: normal;
@@ -248,8 +272,18 @@ table.stylized > tbody:last-child > tr > td:last-child,
   animation-timing-function: linear;
 }
 
+/* Misc markdown styles */
 .markdown img {
   max-width: 100%;
+}
+
+.markdown h1 a.anchor,
+.markdown h2 a.anchor,
+.markdown h3 a.anchor,
+.markdown h4 a.anchor,
+.markdown h5 a.anchor,
+.markdown h6 a.anchor {
+  opacity: 0.25;
 }
 
 /* Code block styles */
@@ -266,17 +300,6 @@ code {
   font-size: 1rem;
   border: 1px solid var(--tertiary-color);
   border-radius: 3px;
-}
-.eye-candy nav > a {
-  background-clip: text;
-  background-image: repeating-linear-gradient(transparent 0px 0px, var(--secondary-color) 1px 1px, transparent 2px 2px);
-  color: transparent;
-
-  animation-name: tiledown2px;
-  animation-duration: 2s;
-  animation-direction: normal;
-  animation-iteration-count: infinite;
-  animation-timing-function: linear;
 }
 
 /* Posts feed */
@@ -317,6 +340,15 @@ code {
   }
   to {
     background-position-y: 2px;
+  }
+}
+
+@keyframes tiledown-mask-4px {
+  from {
+    mask-position: 0px 0px;
+  }
+  to {
+    mask-position: 0px 4px;
   }
 }
 

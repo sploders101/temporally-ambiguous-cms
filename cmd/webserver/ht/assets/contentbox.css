@@ -29,8 +29,12 @@
   height: 15px;
 
   /* Content */
-  content: '';
-  --checkerboard-gradient: linear-gradient(to right, transparent 25%, black 100%);
+  content: "";
+  --checkerboard-gradient: linear-gradient(
+    to right,
+    transparent 25%,
+    black 100%
+  );
   -webkit-mask-image: var(--checkerboard-gradient);
   mask-image: var(--checkerboard-gradient);
   background-image: conic-gradient(
@@ -56,7 +60,7 @@
     background-position: 0 0;
   }
 }
-@media(min-width: 35rem) {
+@media (min-width: 35rem) {
   .contentbox-double-borders {
     border-top-left-radius: 25px;
     border-bottom-right-radius: 25px;
@@ -65,7 +69,7 @@
     background: var(--background-color);
     padding: 5px;
 
-    width: calc( 100% - 15px );
+    width: calc(100% - 15px);
   }
 
   .contentbox-decoration-anchor {
@@ -75,7 +79,11 @@
   }
   .contentbox-decoration-anchor::before {
     /* Shorten checkerboard for larger screens */
-    --checkerboard-gradient: linear-gradient(to right, transparent 50%, black 100%)
+    --checkerboard-gradient: linear-gradient(
+      to right,
+      transparent 50%,
+      black 100%
+    );
   }
   .contentbox-decoration-anchor::after {
     /* Hatching decoration */
@@ -89,7 +97,7 @@
     z-index: -1;
 
     /* Content */
-    content: '';
+    content: "";
     background-image: linear-gradient(
       45deg,
       var(--decoration-color) 0% 4.8828125%,
@@ -106,7 +114,9 @@
     border-bottom-right-radius: 30px;
 
     /* Make it fade */
-    --mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,1) 20px), linear-gradient(to right, rgba(0,0,0,0) 0, rgba(0,0,0,1) 20px);
+    --mask-image:
+      linear-gradient(to bottom, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 1) 20px),
+      linear-gradient(to right, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 1) 20px);
     -webkit-mask-image: var(--mask-image);
     mask-image: var(--mask-image);
     -webkit-mask-composite: source-in;
@@ -118,6 +128,26 @@
     animation-direction: normal;
     animation-iteration-count: infinite;
     animation-timing-function: linear;
+  }
+}
+@supports (-moz-appearance: none) {
+  .contentbox-decoration-anchor::after {
+    /* Firefox kinda sucks at anti-aliasing. */
+    /* Use simpler textures & disable animation to avoid giving the user a seizure... */
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--decoration-color) 0px 1.325825215px,
+      transparent 1.325825215px 3.977475644px,
+      var(--decoration-color) 3.977475644px 6.629126073px,
+      transparent 6.629126073px 9.280776502px,
+      var(--decoration-color) 9.280776502px 11.932426931px,
+      transparent 11.932426931px 14.58407736px,
+      var(--decoration-color) 14.58407736px 17.235727789px,
+      transparent 17.235727789px 19.887378245px,
+      var(--decoration-color) 19.887378245px 21.213203436px
+    );
+    background-size: unset;
+    animation: none;
   }
 }
 
@@ -140,8 +170,8 @@
     var(--gradient-1) 20%,
     var(--gradient-2) 50%,
     var(--gradient-1) 50%,
-    var(--gradient-2) calc( 100% - 100px ),
-    var(--gradient-1) calc( 100% - 100px )
+    var(--gradient-2) calc(100% - 100px),
+    var(--gradient-1) calc(100% - 100px)
   );
 }
 .window-decoration {
