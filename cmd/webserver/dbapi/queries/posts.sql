@@ -17,11 +17,11 @@ RETURNING *;
 
 -- name: GetArticleRevision :one
 SELECT
-    sqlc.embed(articles),
-    sqlc.embed(articles__revisions)
-FROM articles__revisions
-INNER JOIN articles ON articles.id = articles__revisions.article_id
-WHERE public_id = $1;
+    sqlc.embed(a),
+    sqlc.embed(ar)
+FROM articles__revisions ar
+INNER JOIN articles a ON a.id = ar.article_id
+WHERE ar.public_id = $1;
 
 -- name: PublishArticleRevision :exec
 UPDATE articles__revisions
@@ -43,6 +43,22 @@ FROM articles a
 INNER JOIN articles__revisions ar ON ar.article_id = a.id
 WHERE
     a.slug = $1
+    AND ar.published_at IS NOT NULL
+    AND ar.published_at <= now()
+ORDER BY ar.published_at DESC
+LIMIT 1;
+
+-- name: GetPublishedRevisionByUuid :one
+SELECT
+    sqlc.embed(a),
+    sqlc.embed(ar)
+FROM articles a
+INNER JOIN articles__revisions ar ON ar.article_id = a.id
+WHERE
+    (
+        a.public_id = $1
+        OR ar.public_id = $1
+    )
     AND ar.published_at IS NOT NULL
     AND ar.published_at <= now()
 ORDER BY ar.published_at DESC
@@ -97,7 +113,11 @@ INNER JOIN articles__revisions__assets ara ON ara.sha512_hash = assets.sha512_ha
 INNER JOIN articles__revisions ar ON ara.revision_id = ar.id
 INNER JOIN articles a ON ar.article_id = a.id
 WHERE
-    a.slug = $1
+    (
+        a.slug = $1
+        OR ar.public_id = sqlc.arg(article_id)
+        OR a.public_id = sqlc.arg(article_id)
+    )
     AND ara.file_name = $2
     AND ar.published_at IS NOT NULL
 ORDER BY ar.published_at DESC

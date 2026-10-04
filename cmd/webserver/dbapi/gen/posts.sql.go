@@ -19,7 +19,7 @@ INSERT INTO articles (
     slug
 ) VALUES ($1, $2)
 ON CONFLICT (slug) DO NOTHING
-RETURNING id, author, slug
+RETURNING id, public_id, author, slug
 `
 
 type CreateArticleParams struct {
@@ -30,7 +30,12 @@ type CreateArticleParams struct {
 func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error) {
 	row := q.db.QueryRowContext(ctx, createArticle, arg.Author, arg.Slug)
 	var i Article
-	err := row.Scan(&i.ID, &i.Author, &i.Slug)
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Author,
+		&i.Slug,
+	)
 	return i, err
 }
 
@@ -54,7 +59,7 @@ func (q *Queries) CreateAsset(ctx context.Context, arg CreateAssetParams) error 
 }
 
 const getArticleBySlug = `-- name: GetArticleBySlug :one
-SELECT id, author, slug
+SELECT id, public_id, author, slug
 FROM articles
 WHERE slug = $1
 `
@@ -62,7 +67,12 @@ WHERE slug = $1
 func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, error) {
 	row := q.db.QueryRowContext(ctx, getArticleBySlug, slug)
 	var i Article
-	err := row.Scan(&i.ID, &i.Author, &i.Slug)
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Author,
+		&i.Slug,
+	)
 	return i, err
 }
 
@@ -80,7 +90,7 @@ WITH latest_revisions AS (
     GROUP BY a.id
 )
 SELECT
-    a.id, a.author, a.slug,
+    a.id, a.public_id, a.author, a.slug,
     ar.id, ar.public_id, ar.article_id, ar.title, ar.description, ar.body, ar.created_at, ar.published_at,
     CAST(lr.oldest_publish AS TIMESTAMPTZ) AS original_publish
 FROM articles a
@@ -116,6 +126,7 @@ func (q *Queries) GetArticleFeed(ctx context.Context, arg GetArticleFeedParams) 
 		var i GetArticleFeedRow
 		if err := rows.Scan(
 			&i.Article.ID,
+			&i.Article.PublicID,
 			&i.Article.Author,
 			&i.Article.Slug,
 			&i.ArticlesRevision.ID,
@@ -143,11 +154,11 @@ func (q *Queries) GetArticleFeed(ctx context.Context, arg GetArticleFeedParams) 
 
 const getArticleRevision = `-- name: GetArticleRevision :one
 SELECT
-    articles.id, articles.author, articles.slug,
-    articles__revisions.id, articles__revisions.public_id, articles__revisions.article_id, articles__revisions.title, articles__revisions.description, articles__revisions.body, articles__revisions.created_at, articles__revisions.published_at
-FROM articles__revisions
-INNER JOIN articles ON articles.id = articles__revisions.article_id
-WHERE public_id = $1
+    a.id, a.public_id, a.author, a.slug,
+    ar.id, ar.public_id, ar.article_id, ar.title, ar.description, ar.body, ar.created_at, ar.published_at
+FROM articles__revisions ar
+INNER JOIN articles a ON a.id = ar.article_id
+WHERE ar.public_id = $1
 `
 
 type GetArticleRevisionRow struct {
@@ -160,6 +171,7 @@ func (q *Queries) GetArticleRevision(ctx context.Context, publicID uuid.UUID) (G
 	var i GetArticleRevisionRow
 	err := row.Scan(
 		&i.Article.ID,
+		&i.Article.PublicID,
 		&i.Article.Author,
 		&i.Article.Slug,
 		&i.ArticlesRevision.ID,
@@ -181,7 +193,11 @@ INNER JOIN articles__revisions__assets ara ON ara.sha512_hash = assets.sha512_ha
 INNER JOIN articles__revisions ar ON ara.revision_id = ar.id
 INNER JOIN articles a ON ar.article_id = a.id
 WHERE
-    a.slug = $1
+    (
+        a.slug = $1
+        OR ar.public_id = $3
+        OR a.public_id = $3
+    )
     AND ara.file_name = $2
     AND ar.published_at IS NOT NULL
 ORDER BY ar.published_at DESC
@@ -189,12 +205,13 @@ LIMIT 1
 `
 
 type GetAssetParams struct {
-	Slug     string
-	FileName string
+	Slug      string
+	FileName  string
+	ArticleID uuid.UUID
 }
 
 func (q *Queries) GetAsset(ctx context.Context, arg GetAssetParams) (Asset, error) {
-	row := q.db.QueryRowContext(ctx, getAsset, arg.Slug, arg.FileName)
+	row := q.db.QueryRowContext(ctx, getAsset, arg.Slug, arg.FileName, arg.ArticleID)
 	var i Asset
 	err := row.Scan(
 		&i.Sha512Hash,
@@ -278,7 +295,7 @@ func (q *Queries) GetMissingArticleAssetsByUuid(ctx context.Context, publicID uu
 
 const getPublishedRevisionBySlug = `-- name: GetPublishedRevisionBySlug :one
 SELECT
-    a.id, a.author, a.slug,
+    a.id, a.public_id, a.author, a.slug,
     ar.id, ar.public_id, ar.article_id, ar.title, ar.description, ar.body, ar.created_at, ar.published_at
 FROM articles a
 INNER JOIN articles__revisions ar ON ar.article_id = a.id
@@ -300,6 +317,49 @@ func (q *Queries) GetPublishedRevisionBySlug(ctx context.Context, slug string) (
 	var i GetPublishedRevisionBySlugRow
 	err := row.Scan(
 		&i.Article.ID,
+		&i.Article.PublicID,
+		&i.Article.Author,
+		&i.Article.Slug,
+		&i.ArticlesRevision.ID,
+		&i.ArticlesRevision.PublicID,
+		&i.ArticlesRevision.ArticleID,
+		&i.ArticlesRevision.Title,
+		&i.ArticlesRevision.Description,
+		&i.ArticlesRevision.Body,
+		&i.ArticlesRevision.CreatedAt,
+		&i.ArticlesRevision.PublishedAt,
+	)
+	return i, err
+}
+
+const getPublishedRevisionByUuid = `-- name: GetPublishedRevisionByUuid :one
+SELECT
+    a.id, a.public_id, a.author, a.slug,
+    ar.id, ar.public_id, ar.article_id, ar.title, ar.description, ar.body, ar.created_at, ar.published_at
+FROM articles a
+INNER JOIN articles__revisions ar ON ar.article_id = a.id
+WHERE
+    (
+        a.public_id = $1
+        OR ar.public_id = $1
+    )
+    AND ar.published_at IS NOT NULL
+    AND ar.published_at <= now()
+ORDER BY ar.published_at DESC
+LIMIT 1
+`
+
+type GetPublishedRevisionByUuidRow struct {
+	Article          Article
+	ArticlesRevision ArticlesRevision
+}
+
+func (q *Queries) GetPublishedRevisionByUuid(ctx context.Context, publicID uuid.UUID) (GetPublishedRevisionByUuidRow, error) {
+	row := q.db.QueryRowContext(ctx, getPublishedRevisionByUuid, publicID)
+	var i GetPublishedRevisionByUuidRow
+	err := row.Scan(
+		&i.Article.ID,
+		&i.Article.PublicID,
 		&i.Article.Author,
 		&i.Article.Slug,
 		&i.ArticlesRevision.ID,

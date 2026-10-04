@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/sploders101/personal-website/cmd/webserver/config"
 	"github.com/sploders101/personal-website/cmd/webserver/dbapi"
 	queries "github.com/sploders101/personal-website/cmd/webserver/dbapi/gen"
@@ -25,10 +26,21 @@ func servePostAsset(
 
 		// Get asset details from db
 		slug := req.PathValue("slug")
+		articleId := req.PathValue("articleId")
+		var articleUuid uuid.UUID
+		if articleId != "" {
+			var err error
+			articleUuid, err = uuid.Parse(articleId)
+			if err != nil {
+				serve404.ServeHTTP(resp, req)
+				return
+			}
+		}
 		fileName := req.PathValue("file")
 		dbAsset, err := db.Query().GetAsset(ctx, queries.GetAssetParams{
-			Slug:     slug,
-			FileName: fileName,
+			Slug:      slug,
+			ArticleID: articleUuid,
+			FileName:  fileName,
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

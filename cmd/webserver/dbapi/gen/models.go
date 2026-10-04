@@ -12,9 +12,10 @@ import (
 )
 
 type Article struct {
-	ID     int64
-	Author uuid.NullUUID
-	Slug   string
+	ID       int64
+	PublicID uuid.UUID
+	Author   uuid.NullUUID
+	Slug     string
 }
 
 type ArticlesRevision struct {

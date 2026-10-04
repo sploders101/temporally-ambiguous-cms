@@ -15,6 +15,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
+	"go.abhg.dev/goldmark/anchor"
 )
 
 //go:embed ashenglass.xml
@@ -81,6 +82,7 @@ func Render(markdown []byte, renderOptions RenderOptions) (ArticleFrontmatter, s
 			meta.Meta,
 			extension.GFM,
 			highlighting.NewHighlighting(highlightingOptions...),
+			&anchor.Extender{},
 		),
 	)
 	var buf bytes.Buffer

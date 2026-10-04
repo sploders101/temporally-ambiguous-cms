@@ -103,7 +103,7 @@ func BaseTemplate(cfg config.ServerConfig, templateName string) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		baseCfg, err := getBasePageConfig(cfg, req)
 		if err != nil {
-			slog.Error("Error generating base page config", "config", baseCfg)
+			slog.Error("Error generating base page config", "error", err)
 			http.Error(resp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -117,7 +117,12 @@ func BaseTemplate(cfg config.ServerConfig, templateName string) http.Handler {
 	})
 }
 
-func PostTemplate(cfg config.ServerConfig, db dbapi.Db, templateName string) http.Handler {
+func PostTemplate(
+	cfg config.ServerConfig,
+	db dbapi.Db,
+	templateName string,
+	handler404 http.Handler,
+) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		tx, err := db.Begin(req.Context())
 		if err != nil {
@@ -128,7 +133,11 @@ func PostTemplate(cfg config.ServerConfig, db dbapi.Db, templateName string) htt
 		baseCfg, err := getPostTemplateConfig(cfg, req, tx.Query())
 		tx.Rollback()
 		if err != nil {
-			slog.Error("Error generating post template config", "config", baseCfg)
+			if errors.Is(err, ErrPostNotFound) {
+				handler404.ServeHTTP(resp, req)
+				return
+			}
+			slog.Error("Error generating post template config", "error", err)
 			http.Error(resp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -153,7 +162,7 @@ func PostsFeedTemplate(cfg config.ServerConfig, db dbapi.Db, templateName string
 		baseCfg, err := getPostFeedTemplateConfig(cfg, req, tx.Query())
 		tx.Rollback()
 		if err != nil {
-			slog.Error("Error generating post template config", "config", baseCfg)
+			slog.Error("Error generating post template config", "error", err)
 			http.Error(resp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -171,7 +180,7 @@ func ProfileTemplate(cfg config.ServerConfig, db dbapi.Db, templateName string) 
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		baseCfg, err := getProfileTemplateVars(cfg, req, db)
 		if err != nil {
-			slog.Error("Error generating base page config", "config", baseCfg)
+			slog.Error("Error generating base page config", "error", err)
 			http.Error(resp, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -185,8 +194,7 @@ func ProfileTemplate(cfg config.ServerConfig, db dbapi.Db, templateName string) 
 	})
 }
 
-func ServeAssets(cfg config.ServerConfig, db dbapi.Db) http.Handler {
-	handler404 := userdata.UserMiddleware(db, Serve404(cfg))
+func ServeAssets(cfg config.ServerConfig, db dbapi.Db, handler404 http.Handler) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		file, err := assets.Open(path.Join("assets", req.URL.Path))
 		if err != nil {
@@ -215,8 +223,8 @@ func ServeHome(cfg config.ServerConfig) http.Handler {
 	return BaseTemplate(cfg, "home.html")
 }
 
-func ServePost(cfg config.ServerConfig, db dbapi.Db) http.Handler {
-	return PostTemplate(cfg, db, "post.html")
+func ServePost(cfg config.ServerConfig, db dbapi.Db, handler404 http.Handler) http.Handler {
+	return PostTemplate(cfg, db, "post.html", handler404)
 }
 
 func ServePostFeed(cfg config.ServerConfig, db dbapi.Db) http.Handler {

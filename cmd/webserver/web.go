@@ -16,14 +16,24 @@ import (
 	"github.com/sploders101/personal-website/internal/env"
 )
 
-func makeWebRouter(ctx context.Context, cfg config.ServerConfig, db dbapi.Db, storageDriver storage.StorageDriver) http.Handler {
+func makeWebRouter(
+	ctx context.Context,
+	cfg config.ServerConfig,
+	db dbapi.Db,
+	storageDriver storage.StorageDriver,
+) http.Handler {
 	// Applies common middlewares
 	mw := func(handler http.Handler) http.Handler {
 		return userdata.UserMiddleware(db, handler)
 	}
 
+	handler404 := ht.Serve404(cfg)
+
+	postServer := mw(ht.ServePost(cfg, db, handler404))
+	postAssetServer := servePostAsset(cfg, db, storageDriver)
+
 	webRouter := http.NewServeMux()
-	webRouter.Handle("GET /", ht.ServeAssets(cfg, db))
+	webRouter.Handle("GET /", ht.ServeAssets(cfg, db, mw(handler404)))
 	webRouter.Handle("GET /{$}", mw(ht.ServeHome(cfg)))
 
 	webRouter.Handle("GET /feeds/rss", postfeeds.ServeRSS(ctx, cfg, db))
@@ -31,8 +41,11 @@ func makeWebRouter(ctx context.Context, cfg config.ServerConfig, db dbapi.Db, st
 	webRouter.Handle("GET /feeds/json", postfeeds.ServeJSON(ctx, cfg, db))
 
 	webRouter.Handle("GET /posts/{$}", mw(ht.ServePostFeed(cfg, db)))
-	webRouter.Handle("GET /posts/{slug}/{$}", ht.ServePost(cfg, db))
-	webRouter.Handle("GET /posts/{slug}/{file...}", servePostAsset(cfg, db, storageDriver))
+	webRouter.Handle("GET /posts/{slug}/{$}", postServer)
+	webRouter.Handle("GET /posts/{slug}/{file...}", postAssetServer)
+
+	webRouter.Handle("GET /permalinks/posts/{articleId}/{$}", postServer)
+	webRouter.Handle("GET /permalinks/posts/{articleId}/{file...}", postAssetServer)
 
 	webRouter.Handle("GET /login/", mw(ht.ServeLogin(cfg)))
 	webRouter.Handle("POST /logout/", mw(serveLogout(db)))

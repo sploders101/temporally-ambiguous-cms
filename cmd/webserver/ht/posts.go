@@ -1,12 +1,15 @@
 package ht
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sploders101/personal-website/cmd/webserver/config"
 	queries "github.com/sploders101/personal-website/cmd/webserver/dbapi/gen"
 	"github.com/sploders101/personal-website/internal/markdown"
@@ -14,12 +17,15 @@ import (
 
 type postTemplateVars struct {
 	baseTemplateVars
+
 	Slug         string
 	Title        string
 	Description  string
 	PublishedAt  time.Time
 	PostContents template.HTML
 }
+
+var ErrPostNotFound = errors.New("post not found")
 
 func getPostTemplateConfig(
 	cfg config.ServerConfig,
@@ -32,14 +38,38 @@ func getPostTemplateConfig(
 		return postTemplateVars{}, err
 	}
 
-	slug := req.PathValue("slug")
-	article, err := db.GetPublishedRevisionBySlug(ctx, slug)
-	if err != nil {
-		return postTemplateVars{}, err
+	var article queries.Article
+	var revision queries.ArticlesRevision
+	if slug := req.PathValue("slug"); slug != "" {
+		articleContainer, err := db.GetPublishedRevisionBySlug(ctx, slug)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return postTemplateVars{}, ErrPostNotFound
+			}
+			return postTemplateVars{}, err
+		}
+		article = articleContainer.Article
+		revision = articleContainer.ArticlesRevision
+	} else if articleId := req.PathValue("articleId"); articleId != "" {
+		articleUuid, err := uuid.Parse(articleId)
+		if err != nil {
+			return postTemplateVars{}, ErrPostNotFound
+		}
+		articleContainer, err := db.GetPublishedRevisionByUuid(ctx, articleUuid)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return postTemplateVars{}, ErrPostNotFound
+			}
+			return postTemplateVars{}, err
+		}
+		article = articleContainer.Article
+		revision = articleContainer.ArticlesRevision
+	} else {
+		return postTemplateVars{}, ErrPostNotFound
 	}
 
 	_, htmlContents, err := markdown.Render(
-		[]byte(article.ArticlesRevision.Body),
+		[]byte(revision.Body),
 		markdown.RenderOptions{
 			EnableXHTML: false,
 			Highlight: markdown.HighlightOptions{
@@ -53,16 +83,17 @@ func getPostTemplateConfig(
 
 	return postTemplateVars{
 		baseTemplateVars: baseVars,
-		Slug:             article.Article.Slug,
-		Title:            article.ArticlesRevision.Title,
-		Description:      article.ArticlesRevision.Description,
-		PublishedAt:      article.ArticlesRevision.PublishedAt.Time,
+		Slug:             article.Slug,
+		Title:            revision.Title,
+		Description:      revision.Description,
+		PublishedAt:      revision.PublishedAt.Time,
 		PostContents:     template.HTML(htmlContents),
 	}, nil
 }
 
 type postFeedTemplateVars struct {
 	baseTemplateVars
+
 	Posts []postFeedPost
 }
 
