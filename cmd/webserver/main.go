@@ -87,8 +87,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	address := "[::]:8080"
-
 	router := http.NewServeMux()
 	router.Handle("/", makeWebRouter(ctx, cfg, db, storageDriver))
 	router.Handle(authv1connect.NewAuthServiceHandler(
@@ -103,12 +101,12 @@ func main() {
 	)
 
 	// Start server
-	listener, err := net.Listen("tcp", address)
+	listener, err := net.Listen("tcp", cfg.ListenAddress)
 	if err != nil {
-		slog.Error("Error listening on specified address", "address", address, "error", err)
+		slog.Error("Error listening on specified address", "address", cfg.ListenAddress, "error", err)
 		os.Exit(1)
 	}
-	slog.Info("Listening for connections", "address", address)
+	slog.Info("Listening for connections", "address", cfg.ListenAddress)
 
 	server := &http.Server{
 		Handler:   router,
@@ -117,7 +115,7 @@ func main() {
 	server.Protocols.SetHTTP1(true)
 	server.Protocols.SetUnencryptedHTTP2(true)
 	if err := server.Serve(listener); err != nil {
-		slog.Error("Error serving connections", "address", address, "error", err)
+		slog.Error("Error serving connections", "address", cfg.ListenAddress, "error", err)
 		os.Exit(1)
 	}
 }

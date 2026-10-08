@@ -18,6 +18,7 @@ const (
 
 type ServerConfig struct {
 	BaseUrl        string               `mapstructure:"base_url"`
+	ListenAddress  string               `mapstructure:"listen_address"`
 	SiteSettings   SiteSettings         `mapstructure:"site_settings"`
 	Authentication AuthenticationConfig `mapstructure:"authentication"`
 	Database       DatabaseConfig       `mapstructure:"database"`
@@ -93,6 +94,9 @@ func Load(path string) (ServerConfig, error) {
 	}
 	if cfg.SiteSettings.ShortTitle == "" {
 		cfg.SiteSettings.ShortTitle = cfg.SiteSettings.Title
+	}
+	if cfg.ListenAddress == "" {
+		return ServerConfig{}, errors.New("missing `listen_address`")
 	}
 	if cfg.Storage.LocalFS != nil && cfg.Storage.S3 != nil {
 		return ServerConfig{}, errors.New("multiple storage backends specified")
