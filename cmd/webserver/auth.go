@@ -51,6 +51,8 @@ func mustHashPassword(password string) string {
 
 func serveLocalLogin(cfg config.ServerConfig, db dbapi.Db) http.Handler {
 	return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+
 		if !cfg.Authentication.Local.Enabled {
 			http.NotFound(resp, req)
 			return
@@ -67,16 +69,7 @@ func serveLocalLogin(cfg config.ServerConfig, db dbapi.Db) http.Handler {
 			return
 		}
 
-		ctx := req.Context()
-		tx, err := db.Begin(ctx)
-		if err != nil {
-			slog.Error("Failed to open database transaction", "error", err)
-			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		defer tx.Rollback()
-
-		cred, err := tx.Query().GetUserByUsername(ctx, username)
+		cred, err := db.Query().GetUserByUsername(ctx, username)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				// Equalize response time with a real verification so that
@@ -109,6 +102,14 @@ func serveLocalLogin(cfg config.ServerConfig, db dbapi.Db) http.Handler {
 		}
 		expiration := time.Now().Add(24 * time.Hour)
 		tokenHash := sha256.Sum256([]byte(token))
+
+		tx, err := db.Begin(ctx)
+		if err != nil {
+			slog.Error("Failed to open database transaction", "error", err)
+			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
 
 		if err := tx.Query().CreateUserSession(ctx, queries.CreateUserSessionParams{
 			TokenHash: tokenHash[:],
