@@ -26,50 +26,37 @@
           </div>
           {{ template "nav" . }}
           <main>
-            <div class="flex row wrap f-align-start">
-              <div class="flex column nowrap f-grow f-align-start gap-1">
-                <h1>Add SSH Key</h1>
-                <form
-                  action="#"
-                  method="POST"
-                  class="flex column wrap gap-half"
-                >
-                  {{.CsrfField}}
-                  <div class="fieldbox">
-                    <label for="name">Name:</label>
-                    <div class="textbox-wrapper">
-                      <input
-                        id="name"
-                        type="text"
-                        name="name"
-                        placeholder="(derived from key)"
-                        autocomplete="off"
-                        spellcheck="false"
-                      />
-                    </div>
+            <div class="flex column nowrap f-grow f-align-start gap-1">
+              <h1>Add SSH Key</h1>
+              <form action="#" method="POST" class="flex column wrap gap-half">
+                {{.CsrfField}}
+                <div class="fieldbox">
+                  <label for="name">Name:</label>
+                  <div class="textbox-wrapper">
+                    <input
+                      id="name"
+                      type="text"
+                      name="name"
+                      placeholder="(derived from key)"
+                      autocomplete="off"
+                      spellcheck="false"
+                    />
                   </div>
-                  <div class="fieldbox">
-                    <label for="sshkey">SSH Public Key:</label>
-                    <div class="textbox-wrapper">
-                      <input
-                        id="sshkey"
-                        type="text"
-                        name="sshkey"
-                        autocomplete="off"
-                        spellcheck="false"
-                      />
-                    </div>
+                </div>
+                <div class="fieldbox">
+                  <label for="sshkey">SSH Public Key:</label>
+                  <div class="textbox-wrapper">
+                    <input
+                      id="sshkey"
+                      type="text"
+                      name="sshkey"
+                      autocomplete="off"
+                      spellcheck="false"
+                    />
                   </div>
-                  <input type="submit" value="Add Key" />
-                </form>
-              </div>
-              <div class="visbox flex column gap-half">
-                <h6>Actions</h6>
-                <form action="/logout" method="POST">
-                  {{.CsrfField}}
-                  <input type="submit" value="Log out" />
-                </form>
-              </div>
+                </div>
+                <input type="submit" value="Add Key" />
+              </form>
             </div>
           </main>
         </div>

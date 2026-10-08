@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"path"
 
 	"github.com/gorilla/csrf"
@@ -38,6 +39,7 @@ type baseTemplateVars struct {
 	User        queries.User
 	UserSession queries.UsersSession
 	CsrfField   template.HTML
+	QueryParams url.Values
 }
 
 type profileTemplateVars struct {
@@ -60,17 +62,25 @@ func getBasePageConfig(
 	req *http.Request,
 ) (baseTemplateVars, error) {
 	ctx := req.Context()
-	// now := time.Now()
-	// daysSinceEpoch := now.Unix() / 86400
-	// dailyTheme := themes[daysSinceEpoch%int64(len(themes))]
+
+	// Strip sensitive info from user data
+	userData := userdata.GetUserData(ctx)
+	userData.PasswordHash.String = ""
+	userSession := userdata.GetSessionInfo(ctx)
+	userSession.TokenHash = nil
+
+	// Get query params (for form errors, for example)
+	params := req.URL.Query()
+
 	return baseTemplateVars{
 		Devmode:     env.Devmode,
 		DailyTheme:  "",
 		Config:      cfg,
 		Path:        req.URL.Path,
-		User:        userdata.GetUserData(ctx),
-		UserSession: userdata.GetSessionInfo(ctx),
+		User:        userData,
+		UserSession: userSession,
 		CsrfField:   csrf.TemplateField(req),
+		QueryParams: params,
 	}, nil
 }
 
@@ -245,6 +255,10 @@ func ServeProfileEdit(cfg config.ServerConfig) http.Handler {
 
 func ServeAddSshKey(cfg config.ServerConfig) http.Handler {
 	return helpers.RequireLogin(BaseTemplate(cfg, "add_ssh_key.html"))
+}
+
+func ServeChangePassword(cfg config.ServerConfig) http.Handler {
+	return helpers.RequireLogin(BaseTemplate(cfg, "change_password.html"))
 }
 
 func Serve404(cfg config.ServerConfig) http.Handler {

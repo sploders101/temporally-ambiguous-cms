@@ -20,6 +20,9 @@
 .f-align-start {
   align-items: flex-start;
 }
+.f-align-stretch {
+  align-items: stretch;
+}
 .gap-half {
   gap: 0.5rem;
 }

@@ -5,12 +5,26 @@ INSERT INTO users (
 ) VALUES ($1, $2)
 RETURNING *;
 
+-- name: SeedUser :one
+INSERT INTO users (
+    username,
+    email,
+    password_hash
+) VALUES ($1, $2, $3)
+ON CONFLICT (username) DO NOTHING
+RETURNING 1;
+
 -- name: UpdateUserInfo :exec
 UPDATE users
 SET
     username = $2,
     email = $3
 WHERE id = $1;
+
+-- name: SetUserPassword :exec
+UPDATE users
+SET password_hash = $1
+WHERE id = $2;
 
 -- name: CreateUserSession :exec
 INSERT INTO users__sessions (

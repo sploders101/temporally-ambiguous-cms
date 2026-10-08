@@ -232,6 +232,69 @@ func editUserProfile(db dbapi.Db) http.Handler {
 	}))
 }
 
+func changePassword(db dbapi.Db) http.Handler {
+	return helpers.RequireLogin(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+		userDetails := userdata.GetUserData(ctx)
+
+		if err := req.ParseForm(); err != nil {
+			slog.Debug("Unable to parse form", "error", err)
+			http.Error(resp, "Bad request format", http.StatusBadRequest)
+			return
+		}
+
+		oldpass := req.Form.Get("oldpass")
+		newpass := req.Form.Get("newpass")
+		if req.Form.Has("newpassconfirm") {
+			if newpass != req.Form.Get("newpassconfirm") {
+				http.Redirect(resp, req, "/profile/change_password/?error=Passwords+did+not_match.", http.StatusFound)
+				return
+			}
+		}
+
+		// Verify old password
+		pass, err := verifyPassword(oldpass, userDetails.PasswordHash)
+		if err != nil {
+			slog.Error("Failed to validate password", "error", err)
+			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		if !pass {
+			http.Error(resp, "Invalid password", http.StatusUnauthorized)
+			return
+		}
+
+		// Hash new password
+		newHash, err := hashPassword(newpass)
+		if err != nil {
+			slog.Error("Failed to hash new password", "error", err)
+			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		tx, err := db.Begin(ctx)
+		if err != nil {
+			slog.Error("Failed to start db transaction", "error", err)
+			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		if err := tx.Query().SetUserPassword(ctx, queries.SetUserPasswordParams{
+			ID:           userDetails.ID,
+			PasswordHash: sql.NullString{Valid: true, String: newHash},
+		}); err != nil {
+			slog.Error("Failed to commit db transaction", "error", err)
+			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			slog.Error("Failed to commit db transaction", "error", err)
+			http.Error(resp, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}))
+}
+
 func addSSHKey(db dbapi.Db) http.Handler {
 	return helpers.RequireLogin(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()

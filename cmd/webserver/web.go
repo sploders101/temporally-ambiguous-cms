@@ -56,6 +56,10 @@ func makeWebRouter(
 	webRouter.Handle("GET /profile/add_ssh_key/", mw(ht.ServeAddSshKey(cfg)))
 	webRouter.Handle("POST /profile/add_ssh_key/", mw(addSSHKey(db)))
 	webRouter.Handle("POST /profile/remove_ssh_key/", mw(removeSSHKey(db)))
+	if cfg.Authentication.Local.Enabled {
+		webRouter.Handle("GET /profile/change_password/", mw(ht.ServeChangePassword(cfg)))
+		webRouter.Handle("POST /profile/change_password/", mw(changePassword(db)))
+	}
 
 	webRouter.Handle("POST /auth/local/firstfactor", serveLocalLogin(cfg, db))
 	if err := registerOidcHandlers(ctx, cfg, db, webRouter); err != nil {

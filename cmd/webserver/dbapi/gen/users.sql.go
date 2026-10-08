@@ -391,6 +391,45 @@ func (q *Queries) LogSSHAuthentication(ctx context.Context, fingerprint string) 
 	return err
 }
 
+const seedUser = `-- name: SeedUser :one
+INSERT INTO users (
+    username,
+    email,
+    password_hash
+) VALUES ($1, $2, $3)
+ON CONFLICT (username) DO NOTHING
+RETURNING 1
+`
+
+type SeedUserParams struct {
+	Username     string
+	Email        string
+	PasswordHash sql.NullString
+}
+
+func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, seedUser, arg.Username, arg.Email, arg.PasswordHash)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const setUserPassword = `-- name: SetUserPassword :exec
+UPDATE users
+SET password_hash = $1
+WHERE id = $2
+`
+
+type SetUserPasswordParams struct {
+	PasswordHash sql.NullString
+	ID           uuid.UUID
+}
+
+func (q *Queries) SetUserPassword(ctx context.Context, arg SetUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, setUserPassword, arg.PasswordHash, arg.ID)
+	return err
+}
+
 const updateUserInfo = `-- name: UpdateUserInfo :exec
 UPDATE users
 SET

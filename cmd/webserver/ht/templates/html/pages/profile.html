@@ -26,7 +26,7 @@
           </div>
           {{ template "nav" . }}
           <main>
-            <div class="flex row wrap f-align-start">
+            <div class="flex row wrap f-align-start gap-1">
               <div class="flex column nowrap f-grow f-align-start gap-1">
                 <h1>Welcome, {{.User.Username}}!</h1>
                 <table>
@@ -98,9 +98,12 @@
                 </table>
                 <a href="/profile/add_ssh_key/" class="button">Add Key</a>
               </div>
-              <div class="visbox flex column gap-half">
+              <div class="visbox flex column gap-half f-align-stretch">
                 <h6>Actions</h6>
-                <form action="/logout" method="POST">
+                {{if .User.PasswordHash.Valid}}
+                <a href="/profile/change_password" class="button">Change Password</a>
+                {{end}}
+                <form action="/logout" method="POST" class="flex column align-stretch">
                   {{.CsrfField}}
                   <input type="submit" value="Log out" />
                 </form>

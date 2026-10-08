@@ -7,7 +7,12 @@ type AuthenticationConfig struct {
 
 type AuthenticationLocalConfig struct {
 	Enabled           bool `mapstructure:"enabled"`
-	AllowRegistration bool `mapstructure:"allow_registration"`
+	FirstUser FirstUser `mapstructure:"first_user"`
+}
+
+type FirstUser struct {
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
 }
 
 type AuthenticationOidcConfig struct {

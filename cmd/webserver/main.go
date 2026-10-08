@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -14,6 +16,7 @@ import (
 	"github.com/sploders101/personal-website/cmd/webserver/apiservices"
 	"github.com/sploders101/personal-website/cmd/webserver/config"
 	"github.com/sploders101/personal-website/cmd/webserver/dbapi"
+	queries "github.com/sploders101/personal-website/cmd/webserver/dbapi/gen"
 	"github.com/sploders101/personal-website/internal/authutils"
 	"github.com/sploders101/personal-website/internal/env"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/auth/v1/authv1connect"
@@ -46,6 +49,37 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	// Seed first user if configured
+	if cfg.Authentication.Local.Enabled && cfg.Authentication.Local.FirstUser != (config.FirstUser{}) {
+		passwordHash, err := hashPassword(cfg.Authentication.Local.FirstUser.Password)
+		if err != nil {
+			slog.Error("Error hashing initial user's password", "error", err)
+			os.Exit(1)
+		}
+		tx, err := db.Begin(ctx)
+		if err != nil {
+			slog.Error("Failed to start database transaction", "error", err)
+			os.Exit(1)
+		}
+		_, err = tx.Query().SeedUser(ctx, queries.SeedUserParams{
+			Username:     cfg.Authentication.Local.FirstUser.Username,
+			PasswordHash: sql.NullString{Valid: true, String: passwordHash},
+		})
+		if err != nil {
+			tx.Rollback()
+			if !errors.Is(err, sql.ErrNoRows) {
+				slog.Error("Failed to seed first user", "error", err)
+				os.Exit(1)
+			}
+		} else {
+			if err := tx.Commit(); err != nil {
+				slog.Info("Failed to commit database transaction", "error", err)
+				os.Exit(1)
+			}
+			slog.Info("Seeded initial user", "username", cfg.Authentication.Local.FirstUser.Username)
+		}
+	}
 
 	storageDriver, err := createStorageDriver(ctx, cfg)
 	if err != nil {

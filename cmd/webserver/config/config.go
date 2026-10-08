@@ -94,9 +94,6 @@ func Load(path string) (ServerConfig, error) {
 	if cfg.SiteSettings.ShortTitle == "" {
 		cfg.SiteSettings.ShortTitle = cfg.SiteSettings.Title
 	}
-	if cfg.Authentication.Local.Enabled {
-		slog.Warn("Local authentication not yet implemented. Please use OIDC.")
-	}
 	if cfg.Storage.LocalFS != nil && cfg.Storage.S3 != nil {
 		return ServerConfig{}, errors.New("multiple storage backends specified")
 	}
