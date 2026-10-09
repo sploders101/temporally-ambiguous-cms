@@ -20,8 +20,8 @@ import (
 )
 
 // Pushes an article to the server
-func pushArticle(ctx context.Context, mdfile string) error {
-	client := getClient()
+func pushArticle(ctx context.Context, cfg Config, mdfile string) error {
+	client := getClient(cfg.Endpoint)
 	baseDir := filepath.Dir(mdfile)
 
 	slog.Info("Opening markdown", "file", mdfile)

@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
-
-	// "github.com/yuin/goldmark"
 
 	"github.com/sploders101/personal-website/cmd/webserver/apiservices"
 	"github.com/sploders101/personal-website/cmd/webserver/config"
@@ -36,7 +35,7 @@ func main() {
 		slog.Warn("Devmode is enabled!")
 	}
 
-	cfg, err := config.Load(configPath())
+	cfg, err := config.Load(filepath.Join("tacms", "tacms_server.json"))
 	if err != nil {
 		slog.Error("Error loading configuration", "error", err)
 		os.Exit(1)
@@ -118,12 +117,4 @@ func main() {
 		slog.Error("Error serving connections", "address", cfg.ListenAddress, "error", err)
 		os.Exit(1)
 	}
-}
-
-// configPath returns the path of the config file, overridable via CONFIG_FILE.
-func configPath() string {
-	if p := os.Getenv("CONFIG_FILE"); p != "" {
-		return p
-	}
-	return "config.json"
 }

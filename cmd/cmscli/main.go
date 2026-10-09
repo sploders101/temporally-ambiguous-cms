@@ -4,18 +4,34 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"charm.land/log/v2"
 	"connectrpc.com/connect"
 	"github.com/sploders101/personal-website/internal/authclient"
+	"github.com/sploders101/personal-website/internal/configutil"
 	"github.com/sploders101/personal-website/internal/env"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/cms/v1/cmsv1connect"
 	"github.com/urfave/cli/v3"
 )
 
 // TODO: Source these from other means
-const ENDPOINT = "http://127.0.0.1:8080"
 const ASSET_MAX_CHUNK_SIZE = 8192
+
+// Wraps a CLI action handler to provide the config file.
+// The config shouldn't be loaded before the CLI handler is called, but it is needed by
+// almost every handler, so this makes it easy to wrap every function with a config provider.
+func needsConfig(
+	handler func(ctx context.Context, cfg Config, cmd *cli.Command) error,
+) func(ctx context.Context, cmd *cli.Command) error {
+	return func(ctx context.Context, cmd *cli.Command) error {
+		config, err := configutil.FindConfig[Config](filepath.Join("tacms", "config.json"))
+		if err != nil {
+			return err
+		}
+		return handler(ctx, config, cmd)
+	}
+}
 
 func main() {
 	handler := log.New(os.Stderr)
@@ -39,9 +55,9 @@ func main() {
 						Usage:   "Changes the message the server should send back.",
 					},
 				},
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return pingAPI(ctx, cmd.String("message"))
-				},
+				Action: needsConfig(func(ctx context.Context, cfg Config, cmd *cli.Command) error {
+					return pingAPI(ctx, cfg, cmd.String("message"))
+				}),
 			},
 			{
 				Name:  "push",
@@ -53,9 +69,9 @@ func main() {
 						UsageText: "<mdfile>",
 					},
 				},
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return pushArticle(ctx, cmd.StringArg("mdfile"))
-				},
+				Action: needsConfig(func(ctx context.Context, cfg Config, cmd *cli.Command) error {
+					return pushArticle(ctx, cfg, cmd.StringArg("mdfile"))
+				}),
 			},
 		},
 	}
@@ -64,11 +80,11 @@ func main() {
 	}
 }
 
-func getClient() cmsv1connect.CmsServiceClient {
-	authenticator := authclient.NewAuthenticator(ENDPOINT)
+func getClient(endpoint string) cmsv1connect.CmsServiceClient {
+	authenticator := authclient.NewAuthenticator(endpoint)
 	return cmsv1connect.NewCmsServiceClient(
 		env.ConnectHttp,
-		ENDPOINT,
+		endpoint,
 		connect.WithInterceptors(authenticator),
 	)
 }
