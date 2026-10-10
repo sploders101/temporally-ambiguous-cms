@@ -33,15 +33,24 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// AuthServiceExchangeSSHKeyProcedure is the fully-qualified name of the AuthService's
-	// ExchangeSSHKey RPC.
-	AuthServiceExchangeSSHKeyProcedure = "/com.shaunkeys.auth.v1.AuthService/ExchangeSSHKey"
+	// AuthServiceGetAuthPermitProcedure is the fully-qualified name of the AuthService's GetAuthPermit
+	// RPC.
+	AuthServiceGetAuthPermitProcedure = "/com.shaunkeys.auth.v1.AuthService/GetAuthPermit"
+	// AuthServiceCheckSSHKeyProcedure is the fully-qualified name of the AuthService's CheckSSHKey RPC.
+	AuthServiceCheckSSHKeyProcedure = "/com.shaunkeys.auth.v1.AuthService/CheckSSHKey"
+	// AuthServiceExchangeSSHPermitProcedure is the fully-qualified name of the AuthService's
+	// ExchangeSSHPermit RPC.
+	AuthServiceExchangeSSHPermitProcedure = "/com.shaunkeys.auth.v1.AuthService/ExchangeSSHPermit"
 )
 
 // AuthServiceClient is a client for the com.shaunkeys.auth.v1.AuthService service.
 type AuthServiceClient interface {
-	// Exchanges an SSH key signature for a short-lived JWT usable for the CLI
-	ExchangeSSHKey(context.Context) (*connect.BidiStreamForClientSimple[v1.ExchangeSSHKeyRequest, v1.ExchangeSSHKeyResponse], error)
+	// Gets an authentication permit for use with asymmetric cryptographic functions
+	GetAuthPermit(context.Context, *v1.GetAuthPermitRequest) (*v1.GetAuthPermitResponse, error)
+	// Checks if an SSH key is allowed for authorization
+	CheckSSHKey(context.Context, *v1.CheckSSHKeyRequest) (*v1.CheckSSHKeyResponse, error)
+	// Submits an auth permit signed with an SSH key and exchanges it for an authorization token
+	ExchangeSSHPermit(context.Context, *v1.ExchangeSSHPermitRequest) (*v1.ExchangeSSHPermitResponse, error)
 }
 
 // NewAuthServiceClient constructs a client for the com.shaunkeys.auth.v1.AuthService service. By
@@ -55,10 +64,22 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	authServiceMethods := v1.File_proto_com_shaunkeys_auth_v1_main_proto.Services().ByName("AuthService").Methods()
 	return &authServiceClient{
-		exchangeSSHKey: connect.NewClient[v1.ExchangeSSHKeyRequest, v1.ExchangeSSHKeyResponse](
+		getAuthPermit: connect.NewClient[v1.GetAuthPermitRequest, v1.GetAuthPermitResponse](
 			httpClient,
-			baseURL+AuthServiceExchangeSSHKeyProcedure,
-			connect.WithSchema(authServiceMethods.ByName("ExchangeSSHKey")),
+			baseURL+AuthServiceGetAuthPermitProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetAuthPermit")),
+			connect.WithClientOptions(opts...),
+		),
+		checkSSHKey: connect.NewClient[v1.CheckSSHKeyRequest, v1.CheckSSHKeyResponse](
+			httpClient,
+			baseURL+AuthServiceCheckSSHKeyProcedure,
+			connect.WithSchema(authServiceMethods.ByName("CheckSSHKey")),
+			connect.WithClientOptions(opts...),
+		),
+		exchangeSSHPermit: connect.NewClient[v1.ExchangeSSHPermitRequest, v1.ExchangeSSHPermitResponse](
+			httpClient,
+			baseURL+AuthServiceExchangeSSHPermitProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ExchangeSSHPermit")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -66,18 +87,46 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	exchangeSSHKey *connect.Client[v1.ExchangeSSHKeyRequest, v1.ExchangeSSHKeyResponse]
+	getAuthPermit     *connect.Client[v1.GetAuthPermitRequest, v1.GetAuthPermitResponse]
+	checkSSHKey       *connect.Client[v1.CheckSSHKeyRequest, v1.CheckSSHKeyResponse]
+	exchangeSSHPermit *connect.Client[v1.ExchangeSSHPermitRequest, v1.ExchangeSSHPermitResponse]
 }
 
-// ExchangeSSHKey calls com.shaunkeys.auth.v1.AuthService.ExchangeSSHKey.
-func (c *authServiceClient) ExchangeSSHKey(ctx context.Context) (*connect.BidiStreamForClientSimple[v1.ExchangeSSHKeyRequest, v1.ExchangeSSHKeyResponse], error) {
-	return c.exchangeSSHKey.CallBidiStreamSimple(ctx)
+// GetAuthPermit calls com.shaunkeys.auth.v1.AuthService.GetAuthPermit.
+func (c *authServiceClient) GetAuthPermit(ctx context.Context, req *v1.GetAuthPermitRequest) (*v1.GetAuthPermitResponse, error) {
+	response, err := c.getAuthPermit.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// CheckSSHKey calls com.shaunkeys.auth.v1.AuthService.CheckSSHKey.
+func (c *authServiceClient) CheckSSHKey(ctx context.Context, req *v1.CheckSSHKeyRequest) (*v1.CheckSSHKeyResponse, error) {
+	response, err := c.checkSSHKey.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// ExchangeSSHPermit calls com.shaunkeys.auth.v1.AuthService.ExchangeSSHPermit.
+func (c *authServiceClient) ExchangeSSHPermit(ctx context.Context, req *v1.ExchangeSSHPermitRequest) (*v1.ExchangeSSHPermitResponse, error) {
+	response, err := c.exchangeSSHPermit.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
 }
 
 // AuthServiceHandler is an implementation of the com.shaunkeys.auth.v1.AuthService service.
 type AuthServiceHandler interface {
-	// Exchanges an SSH key signature for a short-lived JWT usable for the CLI
-	ExchangeSSHKey(context.Context, *connect.BidiStream[v1.ExchangeSSHKeyRequest, v1.ExchangeSSHKeyResponse]) error
+	// Gets an authentication permit for use with asymmetric cryptographic functions
+	GetAuthPermit(context.Context, *v1.GetAuthPermitRequest) (*v1.GetAuthPermitResponse, error)
+	// Checks if an SSH key is allowed for authorization
+	CheckSSHKey(context.Context, *v1.CheckSSHKeyRequest) (*v1.CheckSSHKeyResponse, error)
+	// Submits an auth permit signed with an SSH key and exchanges it for an authorization token
+	ExchangeSSHPermit(context.Context, *v1.ExchangeSSHPermitRequest) (*v1.ExchangeSSHPermitResponse, error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -87,16 +136,32 @@ type AuthServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	authServiceMethods := v1.File_proto_com_shaunkeys_auth_v1_main_proto.Services().ByName("AuthService").Methods()
-	authServiceExchangeSSHKeyHandler := connect.NewBidiStreamHandler(
-		AuthServiceExchangeSSHKeyProcedure,
-		svc.ExchangeSSHKey,
-		connect.WithSchema(authServiceMethods.ByName("ExchangeSSHKey")),
+	authServiceGetAuthPermitHandler := connect.NewUnaryHandlerSimple(
+		AuthServiceGetAuthPermitProcedure,
+		svc.GetAuthPermit,
+		connect.WithSchema(authServiceMethods.ByName("GetAuthPermit")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceCheckSSHKeyHandler := connect.NewUnaryHandlerSimple(
+		AuthServiceCheckSSHKeyProcedure,
+		svc.CheckSSHKey,
+		connect.WithSchema(authServiceMethods.ByName("CheckSSHKey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceExchangeSSHPermitHandler := connect.NewUnaryHandlerSimple(
+		AuthServiceExchangeSSHPermitProcedure,
+		svc.ExchangeSSHPermit,
+		connect.WithSchema(authServiceMethods.ByName("ExchangeSSHPermit")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/com.shaunkeys.auth.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case AuthServiceExchangeSSHKeyProcedure:
-			authServiceExchangeSSHKeyHandler.ServeHTTP(w, r)
+		case AuthServiceGetAuthPermitProcedure:
+			authServiceGetAuthPermitHandler.ServeHTTP(w, r)
+		case AuthServiceCheckSSHKeyProcedure:
+			authServiceCheckSSHKeyHandler.ServeHTTP(w, r)
+		case AuthServiceExchangeSSHPermitProcedure:
+			authServiceExchangeSSHPermitHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -106,6 +171,14 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 // UnimplementedAuthServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAuthServiceHandler struct{}
 
-func (UnimplementedAuthServiceHandler) ExchangeSSHKey(context.Context, *connect.BidiStream[v1.ExchangeSSHKeyRequest, v1.ExchangeSSHKeyResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("com.shaunkeys.auth.v1.AuthService.ExchangeSSHKey is not implemented"))
+func (UnimplementedAuthServiceHandler) GetAuthPermit(context.Context, *v1.GetAuthPermitRequest) (*v1.GetAuthPermitResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("com.shaunkeys.auth.v1.AuthService.GetAuthPermit is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) CheckSSHKey(context.Context, *v1.CheckSSHKeyRequest) (*v1.CheckSSHKeyResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("com.shaunkeys.auth.v1.AuthService.CheckSSHKey is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ExchangeSSHPermit(context.Context, *v1.ExchangeSSHPermitRequest) (*v1.ExchangeSSHPermitResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("com.shaunkeys.auth.v1.AuthService.ExchangeSSHPermit is not implemented"))
 }

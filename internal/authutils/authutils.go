@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const CMS_ISSUER = "shaunkeyscom"
+
 type IdentityClaims struct {
 	jwt.RegisteredClaims
 
@@ -20,9 +22,9 @@ type IdentityClaims struct {
 
 func (claims *IdentityClaims) FillRegistered(subject uuid.UUID, duration time.Duration) {
 	now := time.Now()
-	claims.Issuer = "shaunkeyscom-cms-auth"
+	claims.Issuer = CMS_ISSUER
 	claims.Subject = subject.String()
-	claims.Audience = []string{"shaunkeyscom-cms"}
+	claims.Audience = []string{CMS_ISSUER}
 	claims.ExpiresAt = jwt.NewNumericDate(now.Add(duration))
 	claims.NotBefore = jwt.NewNumericDate(now)
 	claims.IssuedAt = jwt.NewNumericDate(now)
@@ -40,12 +42,20 @@ func SignToken(claims IdentityClaims, secret string) (string, error) {
 
 func VerifyToken(tokenString string, secret string) (IdentityClaims, error) {
 	var claims IdentityClaims
-	_, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("invalid algorithm")
-		}
-		return []byte(secret), nil
-	})
+	_, err := jwt.ParseWithClaims(
+		tokenString,
+		&claims,
+		func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("invalid algorithm")
+			}
+			return []byte(secret), nil
+		},
+		jwt.WithAudience(CMS_ISSUER),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithNotBeforeRequired(),
+	)
 	if err != nil {
 		return IdentityClaims{}, err
 	}

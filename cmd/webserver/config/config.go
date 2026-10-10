@@ -58,8 +58,9 @@ type LocalFSConfig struct {
 }
 
 type SecretConfig struct {
-	CsrfSecret string `mapstructure:"csrf_secret"`
-	JwtSecret  string `mapstructure:"jwt_secret"`
+	CsrfSecret       string `mapstructure:"csrf_secret"`
+	JwtSecret        string `mapstructure:"jwt_secret"`
+	AuthPermitSecret string `mapstructure:"auth_permit_secret"`
 }
 
 // Load reads the JSON config file at path, resolves any secret references,

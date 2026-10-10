@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -63,60 +62,45 @@ func (authenticator *Authenticator) AuthenticateSSH(ctx context.Context) (string
 		return "", fmt.Errorf("failed to list ssh keys: %w", err)
 	}
 
-	exchanger, err := authenticator.client.ExchangeSSHKey(ctx)
+	permit, err := authenticator.client.GetAuthPermit(ctx, authv1.GetAuthPermitRequest_builder{}.Build())
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("failed to get auth permit: %w", err)
 	}
 
 	for _, key := range keys {
 		fingerprint := ssh.FingerprintSHA256(key)
 
 		// Check if fingerprint is acceptable
-		if err := exchanger.Send(authv1.ExchangeSSHKeyRequest_builder{
-			Fingerprint: authv1.ExchangeSSHKeyRequest_Fingerprint_builder{
-				Fingerprint: fingerprint,
-			}.Build(),
-		}.Build()); err != nil {
+		checkResp, err := authenticator.client.CheckSSHKey(ctx, authv1.CheckSSHKeyRequest_builder{
+			Permit: permit.GetPermit(),
+			Fingerprint: fingerprint,
+		}.Build())
+		if err != nil {
+			return "", fmt.Errorf("failed to check SSH key: %w", err)
+		}
+
+		if !checkResp.GetRecognized() {
+			continue
+		}
+
+		signed, err := myAgent.Sign(key, []byte(permit.GetPermit()))
+		if err != nil {
 			return "", err
 		}
-		response, err := exchanger.Receive()
+		exchangeResp, err := authenticator.client.ExchangeSSHPermit(ctx, authv1.ExchangeSSHPermitRequest_builder{
+			Permit: permit.GetPermit(),
+			Fingerprint: fingerprint,
+			Format: signed.Format,
+			Signature: signed.Blob,
+		}.Build())
 		if err != nil {
 			return "", err
 		}
 
-		switch {
-		case response.HasApproved():
-			approvedMsg := response.GetApproved()
-			challenge := approvedMsg.GetNonce()
-			signed, err := myAgent.Sign(key, challenge)
-			if err != nil {
-				return "", err
-			}
-			if err := exchanger.Send(authv1.ExchangeSSHKeyRequest_builder{
-				Signature: authv1.ExchangeSSHKeyRequest_Signature_builder{
-					Format:    signed.Format,
-					Signature: signed.Blob,
-				}.Build(),
-			}.Build()); err != nil {
-				return "", err
-			}
-			response, err := exchanger.Receive()
-			if err != nil {
-				return "", err
-			}
-			if !response.HasToken() {
-				return "", ErrProtocolViolation
-			}
-			authToken := response.GetToken().GetAuthToken()
-			authenticator.token = authToken
-			authenticator.expiration = time.Now().Add(TOKEN_EXPIRATION)
-			return authToken, nil
-		case response.HasRejected():
-			continue
-		default:
-			slog.Error("Unrecognized message during SSH key authentication", "msg", response)
-			return "", ErrProtocolViolation
-		}
+		authToken := exchangeResp.GetToken()
+		authenticator.token = authToken
+		authenticator.expiration = time.Now().Add(TOKEN_EXPIRATION)
+		return authToken, nil
 	}
 
 	return "", errors.New("no keys accepted")

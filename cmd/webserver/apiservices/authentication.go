@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/sploders101/personal-website/cmd/webserver/config"
 	"github.com/sploders101/personal-website/cmd/webserver/dbapi"
 	"github.com/sploders101/personal-website/internal/authutils"
@@ -19,7 +20,10 @@ import (
 const (
 	MAX_KEY_OFFERINGS = 15
 	NONCE_SIZE        = 256
+	CMS_PERMIT_ISSUER = "shaunkeyscom-auth-permit"
 )
+
+var ErrPermitExpired = connect.NewError(connect.CodePermissionDenied, errors.New("auth permit expired"))
 
 type AuthService struct {
 	config config.ServerConfig
@@ -33,138 +37,129 @@ func NewAuthService(config config.ServerConfig, db dbapi.Db) AuthService {
 	}
 }
 
-func (auth AuthService) ExchangeSSHKey(
-	ctx context.Context,
-	stream *connect.BidiStream[authv1.ExchangeSSHKeyRequest, authv1.ExchangeSSHKeyResponse],
-) error {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	finished := make(chan error, 1)
-	go func() {
-		for range MAX_KEY_OFFERINGS {
-			offeredKey, err := stream.Receive()
-			if err != nil {
-				if connect.CodeOf(err) != connect.CodeCanceled {
-					slog.Error("Failed to receive key offering", "error", err)
-				}
-				finished <- ErrAmbiguousInternal
-				return
-			}
-			if !offeredKey.HasFingerprint() {
-				finished <- ErrProtocolViolation
-				return
-			}
-			fingerprintMsg := offeredKey.GetFingerprint()
-			fingerprint := fingerprintMsg.GetFingerprint()
-
-			tx, err := auth.db.Begin(ctx)
-			if err != nil {
-				slog.Error("Failed to open db transaction", "error", err)
-				finished <- ErrAmbiguousInternal
-				return
-			}
-
-			userBundle, err := tx.Query().GetUserBySshKey(ctx, fingerprint)
-			tx.Rollback()
-			if err != nil {
-				if errors.Is(err, sql.ErrNoRows) {
-					// Expected. Send rejection
-					if err := stream.Send(authv1.ExchangeSSHKeyResponse_builder{
-						Rejected: authv1.ExchangeSSHKeyResponse_FingerprintRejected_builder{}.Build(),
-					}.Build()); err != nil {
-						return
-					}
-					continue
-				}
-				slog.Error("Failed to get user by SSH key", "error", err)
-				finished <- ErrAmbiguousInternal
-				return
-			}
-
-			// Key was found. Start exchange.
-			nonce := make([]byte, NONCE_SIZE)
-			rand.Read(nonce)
-			if err := stream.Send(authv1.ExchangeSSHKeyResponse_builder{
-				Approved: authv1.ExchangeSSHKeyResponse_FingerprintApproved_builder{
-					Nonce: nonce,
-				}.Build(),
-			}.Build()); err != nil {
-				return
-			}
-
-			signatureContainer, err := stream.Receive()
-			if err != nil {
-				return
-			}
-			if !signatureContainer.HasSignature() {
-				// TODO: Allow sending another fingerprint instead.
-				finished <- ErrProtocolViolation
-				return
-			}
-			signatureMsg := signatureContainer.GetSignature()
-			sigFmt := signatureMsg.GetFormat()
-			signature := signatureMsg.GetSignature()
-
-			key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(userBundle.UsersSshKey.PublicKey))
-			if err != nil {
-				finished <- ErrProtocolViolation
-				return
-			}
-			if err := key.Verify(nonce, &ssh.Signature{
-				Format: sigFmt,
-				Blob:   signature,
-			}); err != nil {
-				slog.Error("Error validating signature", "error", err)
-				finished <- ErrAuthenticationFailed
-				return
-			}
-
-			// User is authenticated. Log the attempt and send them a key.
-			tx, err = auth.db.Begin(ctx)
-			if err != nil {
-				slog.Error("Failed to start db transaction", "error", err)
-				finished <- ErrAmbiguousInternal
-				return
-			}
-			defer tx.Rollback()
-			if err := tx.Query().LogSSHAuthentication(ctx, fingerprint); err != nil {
-				slog.Error("Failed to update SSH key last_used", "error", err)
-				finished <- ErrAmbiguousInternal
-				return
-			}
-			if err := tx.Commit(); err != nil {
-				slog.Error("Failed to commit database transaction", "error", err)
-				finished <- ErrAmbiguousInternal
-				return
-			}
-			claims := authutils.IdentityClaims{
-				SshKeyFingerprint: fingerprint,
-			}
-			claims.FillRegistered(userBundle.User.ID, 15*time.Minute)
-			tokenString, err := authutils.SignToken(claims, auth.config.Secrets.JwtSecret)
-			if err != nil {
-				slog.Error("Failed to sign JWT", "error", err)
-				finished <- ErrAmbiguousInternal
-				return
-			}
-			if err := stream.Send(authv1.ExchangeSSHKeyResponse_builder{
-				Token: authv1.ExchangeSSHKeyResponse_AuthToken_builder{
-					AuthToken: tokenString,
-				}.Build(),
-			}.Build()); err != nil {
-				finished <- ErrAmbiguousInternal
-				return
-			}
-			finished <- nil
-			return
-		}
-	}()
-
-	select {
-	case res := <-finished:
-		return res
-	case <-ctx.Done():
-		return ErrTimedOut
+func (auth AuthService) CheckSSHKey(ctx context.Context, req *authv1.CheckSSHKeyRequest) (*authv1.CheckSSHKeyResponse, error) {
+	_, err := verifyPermit(req.GetPermit(), auth.config.Secrets.AuthPermitSecret)
+	if err != nil {
+		slog.Error("Failed permit", "error", err)
+		return nil, ErrPermitExpired
 	}
+
+	_, err = auth.db.Query().GetUserBySshKey(ctx, req.GetFingerprint())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Invalid key. Return normal response
+			return authv1.CheckSSHKeyResponse_builder{
+				Recognized: false,
+			}.Build(), nil
+		}
+		slog.Error("Error getting user by SSH key", "error", err)
+		return nil, ErrAmbiguousInternal
+	}
+	return authv1.CheckSSHKeyResponse_builder{
+		Recognized: true,
+	}.Build(), nil
+}
+
+type AuthPermitClaims struct {
+	jwt.RegisteredClaims
+}
+
+func (auth AuthService) GetAuthPermit(ctx context.Context, req *authv1.GetAuthPermitRequest) (*authv1.GetAuthPermitResponse, error) {
+	now := time.Now()
+	exp := now.Add(2 * time.Minute)
+	claims := AuthPermitClaims{
+		ID: rand.Text(),
+		Issuer: "shaunkeyscom-cms-auth",
+		Audience: jwt.ClaimStrings{CMS_PERMIT_ISSUER},
+		NotBefore: jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(exp),
+		IssuedAt: jwt.NewNumericDate(now),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(auth.config.Secrets.AuthPermitSecret))
+	if err != nil {
+		slog.Error("Failed to sign auth permit", "error", err)
+		return nil, ErrAmbiguousInternal
+	}
+	return authv1.GetAuthPermitResponse_builder{
+		Permit: tokenString,
+	}.Build(), nil
+}
+
+func (auth AuthService) ExchangeSSHPermit(ctx context.Context, req *authv1.ExchangeSSHPermitRequest) (*authv1.ExchangeSSHPermitResponse, error) {
+	permit := req.GetPermit()
+	fingerprint := req.GetFingerprint()
+	format := req.GetFormat()
+	signature := req.GetSignature()
+
+	// Step 1: Validate Permit
+	_, err := verifyPermit(permit, auth.config.Secrets.AuthPermitSecret)
+	if err != nil {
+		return nil, ErrPermitExpired
+	}
+
+	// Step 2: Get user info
+	userBundle, err := auth.db.Query().GetUserBySshKey(ctx, fingerprint)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Expected. Send rejection
+			return nil, ErrAuthenticationFailed
+		}
+		slog.Error("Failed to get user by SSH key", "error", err)
+		return nil, ErrAmbiguousInternal
+	}
+
+	// Step 3: Validate SSH signature
+	key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(userBundle.UsersSshKey.PublicKey))
+	if err != nil {
+		return nil, ErrAmbiguousInternal
+	}
+	if err := key.Verify([]byte(permit), &ssh.Signature{
+		Format: format,
+		Blob:   signature,
+	}); err != nil {
+		return nil, ErrAuthenticationFailed
+	}
+
+	// User is authenticated. Log the attempt and send them a key.
+	if err := auth.db.Query().LogSSHAuthentication(ctx, fingerprint); err != nil {
+		slog.Error("Failed to update SSH key last_used", "error", err)
+		return nil, ErrAmbiguousInternal
+	}
+
+	// Step 4: Return user credential
+	claims := authutils.IdentityClaims{
+		SshKeyFingerprint: fingerprint,
+	}
+	claims.FillRegistered(userBundle.User.ID, 15*time.Minute)
+	tokenString, err := authutils.SignToken(claims, auth.config.Secrets.JwtSecret)
+	if err != nil {
+		slog.Error("Failed to sign JWT", "error", err)
+		return nil, ErrAmbiguousInternal
+	}
+	return authv1.ExchangeSSHPermitResponse_builder{
+		Token: tokenString,
+	}.Build(), nil
+}
+
+func verifyPermit(tokenString string, secret string) (AuthPermitClaims, error) {
+	var claims AuthPermitClaims
+	_, err := jwt.ParseWithClaims(
+		tokenString,
+		&claims,
+		func(token *jwt.Token) (any, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("invalid algorithm")
+			}
+			return []byte(secret), nil
+		},
+		jwt.WithAudience(CMS_PERMIT_ISSUER),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithNotBeforeRequired(),
+	)
+	if err != nil {
+		return AuthPermitClaims{}, err
+	}
+	return claims, nil
 }

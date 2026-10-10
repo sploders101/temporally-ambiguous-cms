@@ -20,54 +20,26 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// This protocol allows you to retrieve a short JWT from the server using an
-// SSH key for initial authentication. The following sequence diagrams
-// demonstrate some example authentication processes.
-//
-// NOTE: If the client offers a key that the server approves, then signs the
-// payload using a different key, sends a payload that does not contain the
-// nonce issued by the server, or sends any otherwise fraudulent payload, the
-// server will immediately disconnect without warning, as this does not match
-// any non-fraudulent, real-world behavior and is considered a protocol
-// violation.
-//
-// Unauthorized user:
-// Client -> Server: fingerprint.fingerprint = <ssh_key_sha256_fingerprint>
-// Server -> Client: rejected
-// Client -> Server: fingerprint.fingerprint = <ssh_key_sha256_fingerprint>
-// Server -> Client: rejected
-// Client -> Server: fingerprint.fingerprint = <ssh_key_sha256_fingerprint>
-// Server -> Client: rejected
-// [Client or server disconnects]
-//
-// Authorized user, multiple keys:
-// Client -> Server: fingerprint.fingerprint = <ssh_key_sha256_fingerprint>
-// Server -> Client: rejected
-// Client -> Server: fingerprint.fingerprint = <ssh_key_sha256_fingerprint>
-// Server -> Client: approved.nonce = "reallylongcsprngstring"
-// Client -> Server: signature.signature = []byte("<nonce_signed_by_approved_key>")
-// Server -> Client: token.auth_token = "<jwt_string>"
-type ExchangeSSHKeyRequest struct {
-	state          protoimpl.MessageState      `protogen:"opaque.v1"`
-	xxx_hidden_Msg isExchangeSSHKeyRequest_Msg `protobuf_oneof:"msg"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+type GetAuthPermitRequest struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ExchangeSSHKeyRequest) Reset() {
-	*x = ExchangeSSHKeyRequest{}
+func (x *GetAuthPermitRequest) Reset() {
+	*x = GetAuthPermitRequest{}
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExchangeSSHKeyRequest) String() string {
+func (x *GetAuthPermitRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExchangeSSHKeyRequest) ProtoMessage() {}
+func (*GetAuthPermitRequest) ProtoMessage() {}
 
-func (x *ExchangeSSHKeyRequest) ProtoReflect() protoreflect.Message {
+func (x *GetAuthPermitRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -79,167 +51,39 @@ func (x *ExchangeSSHKeyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *ExchangeSSHKeyRequest) GetFingerprint() *ExchangeSSHKeyRequest_Fingerprint {
-	if x != nil {
-		if x, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyRequest_Fingerprint_); ok {
-			return x.Fingerprint
-		}
-	}
-	return nil
-}
-
-func (x *ExchangeSSHKeyRequest) GetSignature() *ExchangeSSHKeyRequest_Signature {
-	if x != nil {
-		if x, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyRequest_Signature_); ok {
-			return x.Signature
-		}
-	}
-	return nil
-}
-
-func (x *ExchangeSSHKeyRequest) SetFingerprint(v *ExchangeSSHKeyRequest_Fingerprint) {
-	if v == nil {
-		x.xxx_hidden_Msg = nil
-		return
-	}
-	x.xxx_hidden_Msg = &exchangeSSHKeyRequest_Fingerprint_{v}
-}
-
-func (x *ExchangeSSHKeyRequest) SetSignature(v *ExchangeSSHKeyRequest_Signature) {
-	if v == nil {
-		x.xxx_hidden_Msg = nil
-		return
-	}
-	x.xxx_hidden_Msg = &exchangeSSHKeyRequest_Signature_{v}
-}
-
-func (x *ExchangeSSHKeyRequest) HasMsg() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Msg != nil
-}
-
-func (x *ExchangeSSHKeyRequest) HasFingerprint() bool {
-	if x == nil {
-		return false
-	}
-	_, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyRequest_Fingerprint_)
-	return ok
-}
-
-func (x *ExchangeSSHKeyRequest) HasSignature() bool {
-	if x == nil {
-		return false
-	}
-	_, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyRequest_Signature_)
-	return ok
-}
-
-func (x *ExchangeSSHKeyRequest) ClearMsg() {
-	x.xxx_hidden_Msg = nil
-}
-
-func (x *ExchangeSSHKeyRequest) ClearFingerprint() {
-	if _, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyRequest_Fingerprint_); ok {
-		x.xxx_hidden_Msg = nil
-	}
-}
-
-func (x *ExchangeSSHKeyRequest) ClearSignature() {
-	if _, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyRequest_Signature_); ok {
-		x.xxx_hidden_Msg = nil
-	}
-}
-
-const ExchangeSSHKeyRequest_Msg_not_set_case case_ExchangeSSHKeyRequest_Msg = 0
-const ExchangeSSHKeyRequest_Fingerprint_case case_ExchangeSSHKeyRequest_Msg = 1
-const ExchangeSSHKeyRequest_Signature_case case_ExchangeSSHKeyRequest_Msg = 2
-
-func (x *ExchangeSSHKeyRequest) WhichMsg() case_ExchangeSSHKeyRequest_Msg {
-	if x == nil {
-		return ExchangeSSHKeyRequest_Msg_not_set_case
-	}
-	switch x.xxx_hidden_Msg.(type) {
-	case *exchangeSSHKeyRequest_Fingerprint_:
-		return ExchangeSSHKeyRequest_Fingerprint_case
-	case *exchangeSSHKeyRequest_Signature_:
-		return ExchangeSSHKeyRequest_Signature_case
-	default:
-		return ExchangeSSHKeyRequest_Msg_not_set_case
-	}
-}
-
-type ExchangeSSHKeyRequest_builder struct {
+type GetAuthPermitRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// Fields of oneof xxx_hidden_Msg:
-	Fingerprint *ExchangeSSHKeyRequest_Fingerprint
-	Signature   *ExchangeSSHKeyRequest_Signature
-	// -- end of xxx_hidden_Msg
 }
 
-func (b0 ExchangeSSHKeyRequest_builder) Build() *ExchangeSSHKeyRequest {
-	m0 := &ExchangeSSHKeyRequest{}
+func (b0 GetAuthPermitRequest_builder) Build() *GetAuthPermitRequest {
+	m0 := &GetAuthPermitRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Fingerprint != nil {
-		x.xxx_hidden_Msg = &exchangeSSHKeyRequest_Fingerprint_{b.Fingerprint}
-	}
-	if b.Signature != nil {
-		x.xxx_hidden_Msg = &exchangeSSHKeyRequest_Signature_{b.Signature}
-	}
 	return m0
 }
 
-type case_ExchangeSSHKeyRequest_Msg protoreflect.FieldNumber
-
-func (x case_ExchangeSSHKeyRequest_Msg) String() string {
-	md := file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[0].Descriptor()
-	if x == 0 {
-		return "not set"
-	}
-	return protoimpl.X.MessageFieldStringOf(md, protoreflect.FieldNumber(x))
+type GetAuthPermitResponse struct {
+	state             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Permit string                 `protobuf:"bytes,1,opt,name=permit,proto3"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
-type isExchangeSSHKeyRequest_Msg interface {
-	isExchangeSSHKeyRequest_Msg()
-}
-
-type exchangeSSHKeyRequest_Fingerprint_ struct {
-	Fingerprint *ExchangeSSHKeyRequest_Fingerprint `protobuf:"bytes,1,opt,name=fingerprint,proto3,oneof"`
-}
-
-type exchangeSSHKeyRequest_Signature_ struct {
-	Signature *ExchangeSSHKeyRequest_Signature `protobuf:"bytes,2,opt,name=signature,proto3,oneof"`
-}
-
-func (*exchangeSSHKeyRequest_Fingerprint_) isExchangeSSHKeyRequest_Msg() {}
-
-func (*exchangeSSHKeyRequest_Signature_) isExchangeSSHKeyRequest_Msg() {}
-
-// See ExchangeSSHKeyRequest for full protocol definition
-type ExchangeSSHKeyResponse struct {
-	state          protoimpl.MessageState       `protogen:"opaque.v1"`
-	xxx_hidden_Msg isExchangeSSHKeyResponse_Msg `protobuf_oneof:"msg"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *ExchangeSSHKeyResponse) Reset() {
-	*x = ExchangeSSHKeyResponse{}
+func (x *GetAuthPermitResponse) Reset() {
+	*x = GetAuthPermitResponse{}
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExchangeSSHKeyResponse) String() string {
+func (x *GetAuthPermitResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExchangeSSHKeyResponse) ProtoMessage() {}
+func (*GetAuthPermitResponse) ProtoMessage() {}
 
-func (x *ExchangeSSHKeyResponse) ProtoReflect() protoreflect.Message {
+func (x *GetAuthPermitResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -251,210 +95,53 @@ func (x *ExchangeSSHKeyResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *ExchangeSSHKeyResponse) GetRejected() *ExchangeSSHKeyResponse_FingerprintRejected {
+func (x *GetAuthPermitResponse) GetPermit() string {
 	if x != nil {
-		if x, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Rejected); ok {
-			return x.Rejected
-		}
+		return x.xxx_hidden_Permit
 	}
-	return nil
+	return ""
 }
 
-func (x *ExchangeSSHKeyResponse) GetApproved() *ExchangeSSHKeyResponse_FingerprintApproved {
-	if x != nil {
-		if x, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Approved); ok {
-			return x.Approved
-		}
-	}
-	return nil
+func (x *GetAuthPermitResponse) SetPermit(v string) {
+	x.xxx_hidden_Permit = v
 }
 
-func (x *ExchangeSSHKeyResponse) GetToken() *ExchangeSSHKeyResponse_AuthToken {
-	if x != nil {
-		if x, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Token); ok {
-			return x.Token
-		}
-	}
-	return nil
-}
-
-func (x *ExchangeSSHKeyResponse) SetRejected(v *ExchangeSSHKeyResponse_FingerprintRejected) {
-	if v == nil {
-		x.xxx_hidden_Msg = nil
-		return
-	}
-	x.xxx_hidden_Msg = &exchangeSSHKeyResponse_Rejected{v}
-}
-
-func (x *ExchangeSSHKeyResponse) SetApproved(v *ExchangeSSHKeyResponse_FingerprintApproved) {
-	if v == nil {
-		x.xxx_hidden_Msg = nil
-		return
-	}
-	x.xxx_hidden_Msg = &exchangeSSHKeyResponse_Approved{v}
-}
-
-func (x *ExchangeSSHKeyResponse) SetToken(v *ExchangeSSHKeyResponse_AuthToken) {
-	if v == nil {
-		x.xxx_hidden_Msg = nil
-		return
-	}
-	x.xxx_hidden_Msg = &exchangeSSHKeyResponse_Token{v}
-}
-
-func (x *ExchangeSSHKeyResponse) HasMsg() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Msg != nil
-}
-
-func (x *ExchangeSSHKeyResponse) HasRejected() bool {
-	if x == nil {
-		return false
-	}
-	_, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Rejected)
-	return ok
-}
-
-func (x *ExchangeSSHKeyResponse) HasApproved() bool {
-	if x == nil {
-		return false
-	}
-	_, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Approved)
-	return ok
-}
-
-func (x *ExchangeSSHKeyResponse) HasToken() bool {
-	if x == nil {
-		return false
-	}
-	_, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Token)
-	return ok
-}
-
-func (x *ExchangeSSHKeyResponse) ClearMsg() {
-	x.xxx_hidden_Msg = nil
-}
-
-func (x *ExchangeSSHKeyResponse) ClearRejected() {
-	if _, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Rejected); ok {
-		x.xxx_hidden_Msg = nil
-	}
-}
-
-func (x *ExchangeSSHKeyResponse) ClearApproved() {
-	if _, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Approved); ok {
-		x.xxx_hidden_Msg = nil
-	}
-}
-
-func (x *ExchangeSSHKeyResponse) ClearToken() {
-	if _, ok := x.xxx_hidden_Msg.(*exchangeSSHKeyResponse_Token); ok {
-		x.xxx_hidden_Msg = nil
-	}
-}
-
-const ExchangeSSHKeyResponse_Msg_not_set_case case_ExchangeSSHKeyResponse_Msg = 0
-const ExchangeSSHKeyResponse_Rejected_case case_ExchangeSSHKeyResponse_Msg = 1
-const ExchangeSSHKeyResponse_Approved_case case_ExchangeSSHKeyResponse_Msg = 2
-const ExchangeSSHKeyResponse_Token_case case_ExchangeSSHKeyResponse_Msg = 3
-
-func (x *ExchangeSSHKeyResponse) WhichMsg() case_ExchangeSSHKeyResponse_Msg {
-	if x == nil {
-		return ExchangeSSHKeyResponse_Msg_not_set_case
-	}
-	switch x.xxx_hidden_Msg.(type) {
-	case *exchangeSSHKeyResponse_Rejected:
-		return ExchangeSSHKeyResponse_Rejected_case
-	case *exchangeSSHKeyResponse_Approved:
-		return ExchangeSSHKeyResponse_Approved_case
-	case *exchangeSSHKeyResponse_Token:
-		return ExchangeSSHKeyResponse_Token_case
-	default:
-		return ExchangeSSHKeyResponse_Msg_not_set_case
-	}
-}
-
-type ExchangeSSHKeyResponse_builder struct {
+type GetAuthPermitResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// Fields of oneof xxx_hidden_Msg:
-	Rejected *ExchangeSSHKeyResponse_FingerprintRejected
-	Approved *ExchangeSSHKeyResponse_FingerprintApproved
-	Token    *ExchangeSSHKeyResponse_AuthToken
-	// -- end of xxx_hidden_Msg
+	Permit string
 }
 
-func (b0 ExchangeSSHKeyResponse_builder) Build() *ExchangeSSHKeyResponse {
-	m0 := &ExchangeSSHKeyResponse{}
+func (b0 GetAuthPermitResponse_builder) Build() *GetAuthPermitResponse {
+	m0 := &GetAuthPermitResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Rejected != nil {
-		x.xxx_hidden_Msg = &exchangeSSHKeyResponse_Rejected{b.Rejected}
-	}
-	if b.Approved != nil {
-		x.xxx_hidden_Msg = &exchangeSSHKeyResponse_Approved{b.Approved}
-	}
-	if b.Token != nil {
-		x.xxx_hidden_Msg = &exchangeSSHKeyResponse_Token{b.Token}
-	}
+	x.xxx_hidden_Permit = b.Permit
 	return m0
 }
 
-type case_ExchangeSSHKeyResponse_Msg protoreflect.FieldNumber
-
-func (x case_ExchangeSSHKeyResponse_Msg) String() string {
-	md := file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[1].Descriptor()
-	if x == 0 {
-		return "not set"
-	}
-	return protoimpl.X.MessageFieldStringOf(md, protoreflect.FieldNumber(x))
-}
-
-type isExchangeSSHKeyResponse_Msg interface {
-	isExchangeSSHKeyResponse_Msg()
-}
-
-type exchangeSSHKeyResponse_Rejected struct {
-	Rejected *ExchangeSSHKeyResponse_FingerprintRejected `protobuf:"bytes,1,opt,name=rejected,proto3,oneof"`
-}
-
-type exchangeSSHKeyResponse_Approved struct {
-	Approved *ExchangeSSHKeyResponse_FingerprintApproved `protobuf:"bytes,2,opt,name=approved,proto3,oneof"`
-}
-
-type exchangeSSHKeyResponse_Token struct {
-	Token *ExchangeSSHKeyResponse_AuthToken `protobuf:"bytes,3,opt,name=token,proto3,oneof"`
-}
-
-func (*exchangeSSHKeyResponse_Rejected) isExchangeSSHKeyResponse_Msg() {}
-
-func (*exchangeSSHKeyResponse_Approved) isExchangeSSHKeyResponse_Msg() {}
-
-func (*exchangeSSHKeyResponse_Token) isExchangeSSHKeyResponse_Msg() {}
-
-type ExchangeSSHKeyRequest_Fingerprint struct {
+type CheckSSHKeyRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Fingerprint string                 `protobuf:"bytes,1,opt,name=fingerprint,proto3"`
+	xxx_hidden_Permit      string                 `protobuf:"bytes,1,opt,name=permit,proto3"`
+	xxx_hidden_Fingerprint string                 `protobuf:"bytes,2,opt,name=fingerprint,proto3"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
 
-func (x *ExchangeSSHKeyRequest_Fingerprint) Reset() {
-	*x = ExchangeSSHKeyRequest_Fingerprint{}
+func (x *CheckSSHKeyRequest) Reset() {
+	*x = CheckSSHKeyRequest{}
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExchangeSSHKeyRequest_Fingerprint) String() string {
+func (x *CheckSSHKeyRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExchangeSSHKeyRequest_Fingerprint) ProtoMessage() {}
+func (*CheckSSHKeyRequest) ProtoMessage() {}
 
-func (x *ExchangeSSHKeyRequest_Fingerprint) ProtoReflect() protoreflect.Message {
+func (x *CheckSSHKeyRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -466,53 +153,65 @@ func (x *ExchangeSSHKeyRequest_Fingerprint) ProtoReflect() protoreflect.Message 
 	return mi.MessageOf(x)
 }
 
-func (x *ExchangeSSHKeyRequest_Fingerprint) GetFingerprint() string {
+func (x *CheckSSHKeyRequest) GetPermit() string {
+	if x != nil {
+		return x.xxx_hidden_Permit
+	}
+	return ""
+}
+
+func (x *CheckSSHKeyRequest) GetFingerprint() string {
 	if x != nil {
 		return x.xxx_hidden_Fingerprint
 	}
 	return ""
 }
 
-func (x *ExchangeSSHKeyRequest_Fingerprint) SetFingerprint(v string) {
+func (x *CheckSSHKeyRequest) SetPermit(v string) {
+	x.xxx_hidden_Permit = v
+}
+
+func (x *CheckSSHKeyRequest) SetFingerprint(v string) {
 	x.xxx_hidden_Fingerprint = v
 }
 
-type ExchangeSSHKeyRequest_Fingerprint_builder struct {
+type CheckSSHKeyRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	Permit      string
 	Fingerprint string
 }
 
-func (b0 ExchangeSSHKeyRequest_Fingerprint_builder) Build() *ExchangeSSHKeyRequest_Fingerprint {
-	m0 := &ExchangeSSHKeyRequest_Fingerprint{}
+func (b0 CheckSSHKeyRequest_builder) Build() *CheckSSHKeyRequest {
+	m0 := &CheckSSHKeyRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_Permit = b.Permit
 	x.xxx_hidden_Fingerprint = b.Fingerprint
 	return m0
 }
 
-type ExchangeSSHKeyRequest_Signature struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Format    string                 `protobuf:"bytes,1,opt,name=format,proto3"`
-	xxx_hidden_Signature []byte                 `protobuf:"bytes,2,opt,name=signature,proto3"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+type CheckSSHKeyResponse struct {
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Recognized bool                   `protobuf:"varint,1,opt,name=recognized,proto3"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
-func (x *ExchangeSSHKeyRequest_Signature) Reset() {
-	*x = ExchangeSSHKeyRequest_Signature{}
+func (x *CheckSSHKeyResponse) Reset() {
+	*x = CheckSSHKeyResponse{}
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExchangeSSHKeyRequest_Signature) String() string {
+func (x *CheckSSHKeyResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExchangeSSHKeyRequest_Signature) ProtoMessage() {}
+func (*CheckSSHKeyResponse) ProtoMessage() {}
 
-func (x *ExchangeSSHKeyRequest_Signature) ProtoReflect() protoreflect.Message {
+func (x *CheckSSHKeyResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -524,111 +223,154 @@ func (x *ExchangeSSHKeyRequest_Signature) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *ExchangeSSHKeyRequest_Signature) GetFormat() string {
+func (x *CheckSSHKeyResponse) GetRecognized() bool {
+	if x != nil {
+		return x.xxx_hidden_Recognized
+	}
+	return false
+}
+
+func (x *CheckSSHKeyResponse) SetRecognized(v bool) {
+	x.xxx_hidden_Recognized = v
+}
+
+type CheckSSHKeyResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Recognized bool
+}
+
+func (b0 CheckSSHKeyResponse_builder) Build() *CheckSSHKeyResponse {
+	m0 := &CheckSSHKeyResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Recognized = b.Recognized
+	return m0
+}
+
+type ExchangeSSHPermitRequest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Permit      string                 `protobuf:"bytes,1,opt,name=permit,proto3"`
+	xxx_hidden_Fingerprint string                 `protobuf:"bytes,2,opt,name=fingerprint,proto3"`
+	xxx_hidden_Format      string                 `protobuf:"bytes,3,opt,name=format,proto3"`
+	xxx_hidden_Signature   []byte                 `protobuf:"bytes,4,opt,name=signature,proto3"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ExchangeSSHPermitRequest) Reset() {
+	*x = ExchangeSSHPermitRequest{}
+	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExchangeSSHPermitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExchangeSSHPermitRequest) ProtoMessage() {}
+
+func (x *ExchangeSSHPermitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ExchangeSSHPermitRequest) GetPermit() string {
+	if x != nil {
+		return x.xxx_hidden_Permit
+	}
+	return ""
+}
+
+func (x *ExchangeSSHPermitRequest) GetFingerprint() string {
+	if x != nil {
+		return x.xxx_hidden_Fingerprint
+	}
+	return ""
+}
+
+func (x *ExchangeSSHPermitRequest) GetFormat() string {
 	if x != nil {
 		return x.xxx_hidden_Format
 	}
 	return ""
 }
 
-func (x *ExchangeSSHKeyRequest_Signature) GetSignature() []byte {
+func (x *ExchangeSSHPermitRequest) GetSignature() []byte {
 	if x != nil {
 		return x.xxx_hidden_Signature
 	}
 	return nil
 }
 
-func (x *ExchangeSSHKeyRequest_Signature) SetFormat(v string) {
+func (x *ExchangeSSHPermitRequest) SetPermit(v string) {
+	x.xxx_hidden_Permit = v
+}
+
+func (x *ExchangeSSHPermitRequest) SetFingerprint(v string) {
+	x.xxx_hidden_Fingerprint = v
+}
+
+func (x *ExchangeSSHPermitRequest) SetFormat(v string) {
 	x.xxx_hidden_Format = v
 }
 
-func (x *ExchangeSSHKeyRequest_Signature) SetSignature(v []byte) {
+func (x *ExchangeSSHPermitRequest) SetSignature(v []byte) {
 	if v == nil {
 		v = []byte{}
 	}
 	x.xxx_hidden_Signature = v
 }
 
-type ExchangeSSHKeyRequest_Signature_builder struct {
+type ExchangeSSHPermitRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Format    string
-	Signature []byte
+	Permit      string
+	Fingerprint string
+	Format      string
+	Signature   []byte
 }
 
-func (b0 ExchangeSSHKeyRequest_Signature_builder) Build() *ExchangeSSHKeyRequest_Signature {
-	m0 := &ExchangeSSHKeyRequest_Signature{}
+func (b0 ExchangeSSHPermitRequest_builder) Build() *ExchangeSSHPermitRequest {
+	m0 := &ExchangeSSHPermitRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_Permit = b.Permit
+	x.xxx_hidden_Fingerprint = b.Fingerprint
 	x.xxx_hidden_Format = b.Format
 	x.xxx_hidden_Signature = b.Signature
 	return m0
 }
 
-type ExchangeSSHKeyResponse_FingerprintRejected struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ExchangeSSHKeyResponse_FingerprintRejected) Reset() {
-	*x = ExchangeSSHKeyResponse_FingerprintRejected{}
-	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ExchangeSSHKeyResponse_FingerprintRejected) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ExchangeSSHKeyResponse_FingerprintRejected) ProtoMessage() {}
-
-func (x *ExchangeSSHKeyResponse_FingerprintRejected) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-type ExchangeSSHKeyResponse_FingerprintRejected_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-}
-
-func (b0 ExchangeSSHKeyResponse_FingerprintRejected_builder) Build() *ExchangeSSHKeyResponse_FingerprintRejected {
-	m0 := &ExchangeSSHKeyResponse_FingerprintRejected{}
-	b, x := &b0, m0
-	_, _ = b, x
-	return m0
-}
-
-type ExchangeSSHKeyResponse_FingerprintApproved struct {
+type ExchangeSSHPermitResponse struct {
 	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Nonce []byte                 `protobuf:"bytes,1,opt,name=nonce,proto3"`
+	xxx_hidden_Token string                 `protobuf:"bytes,1,opt,name=token,proto3"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *ExchangeSSHKeyResponse_FingerprintApproved) Reset() {
-	*x = ExchangeSSHKeyResponse_FingerprintApproved{}
+func (x *ExchangeSSHPermitResponse) Reset() {
+	*x = ExchangeSSHPermitResponse{}
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExchangeSSHKeyResponse_FingerprintApproved) String() string {
+func (x *ExchangeSSHPermitResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExchangeSSHKeyResponse_FingerprintApproved) ProtoMessage() {}
+func (*ExchangeSSHPermitResponse) ProtoMessage() {}
 
-func (x *ExchangeSSHKeyResponse_FingerprintApproved) ProtoReflect() protoreflect.Message {
+func (x *ExchangeSSHPermitResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -640,89 +382,28 @@ func (x *ExchangeSSHKeyResponse_FingerprintApproved) ProtoReflect() protoreflect
 	return mi.MessageOf(x)
 }
 
-func (x *ExchangeSSHKeyResponse_FingerprintApproved) GetNonce() []byte {
+func (x *ExchangeSSHPermitResponse) GetToken() string {
 	if x != nil {
-		return x.xxx_hidden_Nonce
-	}
-	return nil
-}
-
-func (x *ExchangeSSHKeyResponse_FingerprintApproved) SetNonce(v []byte) {
-	if v == nil {
-		v = []byte{}
-	}
-	x.xxx_hidden_Nonce = v
-}
-
-type ExchangeSSHKeyResponse_FingerprintApproved_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	// The nonce that the client should sign to prove ownership of the key
-	Nonce []byte
-}
-
-func (b0 ExchangeSSHKeyResponse_FingerprintApproved_builder) Build() *ExchangeSSHKeyResponse_FingerprintApproved {
-	m0 := &ExchangeSSHKeyResponse_FingerprintApproved{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Nonce = b.Nonce
-	return m0
-}
-
-type ExchangeSSHKeyResponse_AuthToken struct {
-	state                protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_AuthToken string                 `protobuf:"bytes,1,opt,name=auth_token,json=authToken,proto3"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *ExchangeSSHKeyResponse_AuthToken) Reset() {
-	*x = ExchangeSSHKeyResponse_AuthToken{}
-	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ExchangeSSHKeyResponse_AuthToken) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ExchangeSSHKeyResponse_AuthToken) ProtoMessage() {}
-
-func (x *ExchangeSSHKeyResponse_AuthToken) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ExchangeSSHKeyResponse_AuthToken) GetAuthToken() string {
-	if x != nil {
-		return x.xxx_hidden_AuthToken
+		return x.xxx_hidden_Token
 	}
 	return ""
 }
 
-func (x *ExchangeSSHKeyResponse_AuthToken) SetAuthToken(v string) {
-	x.xxx_hidden_AuthToken = v
+func (x *ExchangeSSHPermitResponse) SetToken(v string) {
+	x.xxx_hidden_Token = v
 }
 
-type ExchangeSSHKeyResponse_AuthToken_builder struct {
+type ExchangeSSHPermitResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	AuthToken string
+	Token string
 }
 
-func (b0 ExchangeSSHKeyResponse_AuthToken_builder) Build() *ExchangeSSHKeyResponse_AuthToken {
-	m0 := &ExchangeSSHKeyResponse_AuthToken{}
+func (b0 ExchangeSSHPermitResponse_builder) Build() *ExchangeSSHPermitResponse {
+	m0 := &ExchangeSSHPermitResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
-	x.xxx_hidden_AuthToken = b.AuthToken
+	x.xxx_hidden_Token = b.Token
 	return m0
 }
 
@@ -730,54 +411,51 @@ var File_proto_com_shaunkeys_auth_v1_main_proto protoreflect.FileDescriptor
 
 const file_proto_com_shaunkeys_auth_v1_main_proto_rawDesc = "" +
 	"\n" +
-	"&proto/com/shaunkeys/auth/v1/main.proto\x12\x15com.shaunkeys.auth.v1\"\xc8\x02\n" +
-	"\x15ExchangeSSHKeyRequest\x12\\\n" +
-	"\vfingerprint\x18\x01 \x01(\v28.com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.FingerprintH\x00R\vfingerprint\x12V\n" +
-	"\tsignature\x18\x02 \x01(\v26.com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.SignatureH\x00R\tsignature\x1a/\n" +
-	"\vFingerprint\x12 \n" +
-	"\vfingerprint\x18\x01 \x01(\tR\vfingerprint\x1aA\n" +
-	"\tSignature\x12\x16\n" +
-	"\x06format\x18\x01 \x01(\tR\x06format\x12\x1c\n" +
-	"\tsignature\x18\x02 \x01(\fR\tsignatureB\x05\n" +
-	"\x03msg\"\xa2\x03\n" +
-	"\x16ExchangeSSHKeyResponse\x12_\n" +
-	"\brejected\x18\x01 \x01(\v2A.com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.FingerprintRejectedH\x00R\brejected\x12_\n" +
-	"\bapproved\x18\x02 \x01(\v2A.com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.FingerprintApprovedH\x00R\bapproved\x12O\n" +
-	"\x05token\x18\x03 \x01(\v27.com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.AuthTokenH\x00R\x05token\x1a\x15\n" +
-	"\x13FingerprintRejected\x1a+\n" +
-	"\x13FingerprintApproved\x12\x14\n" +
-	"\x05nonce\x18\x01 \x01(\fR\x05nonce\x1a*\n" +
-	"\tAuthToken\x12\x1d\n" +
+	"&proto/com/shaunkeys/auth/v1/main.proto\x12\x15com.shaunkeys.auth.v1\"\x16\n" +
+	"\x14GetAuthPermitRequest\"/\n" +
+	"\x15GetAuthPermitResponse\x12\x16\n" +
+	"\x06permit\x18\x01 \x01(\tR\x06permit\"N\n" +
+	"\x12CheckSSHKeyRequest\x12\x16\n" +
+	"\x06permit\x18\x01 \x01(\tR\x06permit\x12 \n" +
+	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\"5\n" +
+	"\x13CheckSSHKeyResponse\x12\x1e\n" +
 	"\n" +
-	"auth_token\x18\x01 \x01(\tR\tauthTokenB\x05\n" +
-	"\x03msg2\x80\x01\n" +
-	"\vAuthService\x12q\n" +
-	"\x0eExchangeSSHKey\x12,.com.shaunkeys.auth.v1.ExchangeSSHKeyRequest\x1a-.com.shaunkeys.auth.v1.ExchangeSSHKeyResponse(\x010\x01B\xf6\x01\n" +
+	"recognized\x18\x01 \x01(\bR\n" +
+	"recognized\"\x8a\x01\n" +
+	"\x18ExchangeSSHPermitRequest\x12\x16\n" +
+	"\x06permit\x18\x01 \x01(\tR\x06permit\x12 \n" +
+	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12\x16\n" +
+	"\x06format\x18\x03 \x01(\tR\x06format\x12\x1c\n" +
+	"\tsignature\x18\x04 \x01(\fR\tsignature\"1\n" +
+	"\x19ExchangeSSHPermitResponse\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token2\xd7\x02\n" +
+	"\vAuthService\x12j\n" +
+	"\rGetAuthPermit\x12+.com.shaunkeys.auth.v1.GetAuthPermitRequest\x1a,.com.shaunkeys.auth.v1.GetAuthPermitResponse\x12d\n" +
+	"\vCheckSSHKey\x12).com.shaunkeys.auth.v1.CheckSSHKeyRequest\x1a*.com.shaunkeys.auth.v1.CheckSSHKeyResponse\x12v\n" +
+	"\x11ExchangeSSHPermit\x12/.com.shaunkeys.auth.v1.ExchangeSSHPermitRequest\x1a0.com.shaunkeys.auth.v1.ExchangeSSHPermitResponseB\xf6\x01\n" +
 	"\x19com.com.shaunkeys.auth.v1B\tMainProtoP\x01ZWgithub.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/auth/v1;authv1\xa2\x02\x03CSA\xaa\x02\x15Com.Shaunkeys.Auth.V1\xca\x02\x15Com\\Shaunkeys\\Auth\\V1\xe2\x02!Com\\Shaunkeys\\Auth\\V1\\GPBMetadata\xea\x02\x18Com::Shaunkeys::Auth::V1b\x06proto3"
 
-var file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_proto_com_shaunkeys_auth_v1_main_proto_goTypes = []any{
-	(*ExchangeSSHKeyRequest)(nil),                      // 0: com.shaunkeys.auth.v1.ExchangeSSHKeyRequest
-	(*ExchangeSSHKeyResponse)(nil),                     // 1: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse
-	(*ExchangeSSHKeyRequest_Fingerprint)(nil),          // 2: com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.Fingerprint
-	(*ExchangeSSHKeyRequest_Signature)(nil),            // 3: com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.Signature
-	(*ExchangeSSHKeyResponse_FingerprintRejected)(nil), // 4: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.FingerprintRejected
-	(*ExchangeSSHKeyResponse_FingerprintApproved)(nil), // 5: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.FingerprintApproved
-	(*ExchangeSSHKeyResponse_AuthToken)(nil),           // 6: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.AuthToken
+	(*GetAuthPermitRequest)(nil),      // 0: com.shaunkeys.auth.v1.GetAuthPermitRequest
+	(*GetAuthPermitResponse)(nil),     // 1: com.shaunkeys.auth.v1.GetAuthPermitResponse
+	(*CheckSSHKeyRequest)(nil),        // 2: com.shaunkeys.auth.v1.CheckSSHKeyRequest
+	(*CheckSSHKeyResponse)(nil),       // 3: com.shaunkeys.auth.v1.CheckSSHKeyResponse
+	(*ExchangeSSHPermitRequest)(nil),  // 4: com.shaunkeys.auth.v1.ExchangeSSHPermitRequest
+	(*ExchangeSSHPermitResponse)(nil), // 5: com.shaunkeys.auth.v1.ExchangeSSHPermitResponse
 }
 var file_proto_com_shaunkeys_auth_v1_main_proto_depIdxs = []int32{
-	2, // 0: com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.fingerprint:type_name -> com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.Fingerprint
-	3, // 1: com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.signature:type_name -> com.shaunkeys.auth.v1.ExchangeSSHKeyRequest.Signature
-	4, // 2: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.rejected:type_name -> com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.FingerprintRejected
-	5, // 3: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.approved:type_name -> com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.FingerprintApproved
-	6, // 4: com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.token:type_name -> com.shaunkeys.auth.v1.ExchangeSSHKeyResponse.AuthToken
-	0, // 5: com.shaunkeys.auth.v1.AuthService.ExchangeSSHKey:input_type -> com.shaunkeys.auth.v1.ExchangeSSHKeyRequest
-	1, // 6: com.shaunkeys.auth.v1.AuthService.ExchangeSSHKey:output_type -> com.shaunkeys.auth.v1.ExchangeSSHKeyResponse
-	6, // [6:7] is the sub-list for method output_type
-	5, // [5:6] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	0, // 0: com.shaunkeys.auth.v1.AuthService.GetAuthPermit:input_type -> com.shaunkeys.auth.v1.GetAuthPermitRequest
+	2, // 1: com.shaunkeys.auth.v1.AuthService.CheckSSHKey:input_type -> com.shaunkeys.auth.v1.CheckSSHKeyRequest
+	4, // 2: com.shaunkeys.auth.v1.AuthService.ExchangeSSHPermit:input_type -> com.shaunkeys.auth.v1.ExchangeSSHPermitRequest
+	1, // 3: com.shaunkeys.auth.v1.AuthService.GetAuthPermit:output_type -> com.shaunkeys.auth.v1.GetAuthPermitResponse
+	3, // 4: com.shaunkeys.auth.v1.AuthService.CheckSSHKey:output_type -> com.shaunkeys.auth.v1.CheckSSHKeyResponse
+	5, // 5: com.shaunkeys.auth.v1.AuthService.ExchangeSSHPermit:output_type -> com.shaunkeys.auth.v1.ExchangeSSHPermitResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_proto_com_shaunkeys_auth_v1_main_proto_init() }
@@ -785,22 +463,13 @@ func file_proto_com_shaunkeys_auth_v1_main_proto_init() {
 	if File_proto_com_shaunkeys_auth_v1_main_proto != nil {
 		return
 	}
-	file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[0].OneofWrappers = []any{
-		(*exchangeSSHKeyRequest_Fingerprint_)(nil),
-		(*exchangeSSHKeyRequest_Signature_)(nil),
-	}
-	file_proto_com_shaunkeys_auth_v1_main_proto_msgTypes[1].OneofWrappers = []any{
-		(*exchangeSSHKeyResponse_Rejected)(nil),
-		(*exchangeSSHKeyResponse_Approved)(nil),
-		(*exchangeSSHKeyResponse_Token)(nil),
-	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_com_shaunkeys_auth_v1_main_proto_rawDesc), len(file_proto_com_shaunkeys_auth_v1_main_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
