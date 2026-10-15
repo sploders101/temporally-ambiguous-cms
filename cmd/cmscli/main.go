@@ -6,12 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/log/v2"
 	"connectrpc.com/connect"
 	"github.com/sploders101/personal-website/internal/authclient"
 	"github.com/sploders101/personal-website/internal/configutil"
 	"github.com/sploders101/personal-website/internal/env"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/cms/v1/cmsv1connect"
+	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
+	browser "github.com/sploders101/personal-website/pkg/tabrowser"
 	"github.com/urfave/cli/v3"
 )
 
@@ -55,9 +58,11 @@ func main() {
 						Usage:   "Changes the message the server should send back.",
 					},
 				},
-				Action: needsConfig(func(ctx context.Context, cfg Config, cmd *cli.Command) error {
-					return pingAPI(ctx, cfg, cmd.String("message"))
-				}),
+				Action: needsConfig(
+					func(ctx context.Context, cfg Config, cmd *cli.Command) error {
+						return pingAPI(ctx, cfg, cmd.String("message"))
+					},
+				),
 			},
 			{
 				Name:  "push",
@@ -69,16 +74,31 @@ func main() {
 						UsageText: "<mdfile>",
 					},
 				},
-				Action: needsConfig(func(ctx context.Context, cfg Config, cmd *cli.Command) error {
-					return pushArticle(ctx, cfg, cmd.StringArg("mdfile"))
-				}),
+				Action: needsConfig(
+					func(ctx context.Context, cfg Config, cmd *cli.Command) error {
+						return pushArticle(ctx, cfg, cmd.StringArg("mdfile"))
+					},
+				),
 			},
 			{
-				Name: "browse",
+				Name:  "browse",
 				Usage: "Browses articles on the CMS",
-				Action: needsConfig(func(ctx context.Context, cfg Config, cmd *cli.Command) error {
-					return browseCMS(ctx, cfg)
-				}),
+				Action: needsConfig(
+					func(ctx context.Context, cfg Config, cmd *cli.Command) error {
+						client := contentv1connect.NewContentServiceClient(
+							env.ConnectHttp,
+							cfg.Endpoint,
+						)
+
+						model := browser.NewCMSModel(client)
+						p := tea.NewProgram(model)
+						if _, err := p.Run(); err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
 			},
 		},
 	}

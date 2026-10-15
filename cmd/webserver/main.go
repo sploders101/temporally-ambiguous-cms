@@ -20,6 +20,7 @@ import (
 	"github.com/sploders101/personal-website/internal/env"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/auth/v1/authv1connect"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/cms/v1/cmsv1connect"
+	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
 )
 
 func main() {
@@ -50,7 +51,8 @@ func main() {
 	defer db.Close()
 
 	// Seed first user if configured
-	if cfg.Authentication.Local.Enabled && cfg.Authentication.Local.FirstUser != (config.FirstUser{}) {
+	if cfg.Authentication.Local.Enabled &&
+		cfg.Authentication.Local.FirstUser != (config.FirstUser{}) {
 		passwordHash, err := hashPassword(cfg.Authentication.Local.FirstUser.Password)
 		if err != nil {
 			slog.Error("Error hashing initial user's password", "error", err)
@@ -62,6 +64,7 @@ func main() {
 			os.Exit(1)
 		}
 		_, err = tx.Query().SeedUser(ctx, queries.SeedUserParams{
+			// Email:        cfg.Authentication.Local.FirstUser.Email,
 			Username:     cfg.Authentication.Local.FirstUser.Username,
 			PasswordHash: sql.NullString{Valid: true, String: passwordHash},
 		})
@@ -76,7 +79,11 @@ func main() {
 				slog.Info("Failed to commit database transaction", "error", err)
 				os.Exit(1)
 			}
-			slog.Info("Seeded initial user", "username", cfg.Authentication.Local.FirstUser.Username)
+			slog.Info(
+				"Seeded initial user",
+				"username",
+				cfg.Authentication.Local.FirstUser.Username,
+			)
 		}
 	}
 
@@ -98,11 +105,21 @@ func main() {
 		cmsServicePath,
 		authutils.AuthenticateJwt(cfg.Secrets.JwtSecret, cmsServiceHandler),
 	)
+	contentServicePath, contentServiceHandler := contentv1connect.NewContentServiceHandler(
+		apiservices.NewContentService(cfg, db, storageDriver),
+	)
+	router.Handle(contentServicePath, contentServiceHandler)
 
 	// Start server
 	listener, err := net.Listen("tcp", cfg.ListenAddress)
 	if err != nil {
-		slog.Error("Error listening on specified address", "address", cfg.ListenAddress, "error", err)
+		slog.Error(
+			"Error listening on specified address",
+			"address",
+			cfg.ListenAddress,
+			"error",
+			err,
+		)
 		os.Exit(1)
 	}
 	slog.Info("Listening for connections", "address", cfg.ListenAddress)

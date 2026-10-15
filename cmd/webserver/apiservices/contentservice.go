@@ -37,7 +37,10 @@ func (content ContentService) ListArticles(
 	req *contentv1.ListArticlesRequest,
 ) (*contentv1.ListArticlesResponse, error) {
 	if req.GetLimit() > 100 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("limit must not be >100"))
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("limit must not be >100"),
+		)
 	}
 
 	dbArticles, err := content.db.Query().GetArticleFeed(ctx, queries.GetArticleFeedParams{
@@ -79,10 +82,10 @@ func (content ContentService) GetArticle(
 
 	return contentv1.GetArticleResponse_builder{
 		ArticleMetadata: contentv1.ArticleMetadata_builder{
-			Id: dbArticle.Article.PublicID.String(),
-			Slug: dbArticle.Article.Slug,
-			Title: dbArticle.ArticlesRevision.Title,
-			Author: content.config.SiteSettings.Author.Name,
+			Id:          dbArticle.Article.PublicID.String(),
+			Slug:        dbArticle.Article.Slug,
+			Title:       dbArticle.ArticlesRevision.Title,
+			Author:      content.config.SiteSettings.Author.Name,
 			Description: dbArticle.ArticlesRevision.Description,
 		}.Build(),
 		Body: dbArticle.ArticlesRevision.Body,

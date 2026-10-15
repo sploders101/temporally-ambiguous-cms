@@ -11,7 +11,7 @@ import (
 func pingAPI(ctx context.Context, cfg Config, message string) error {
 	client := getClient(cfg.Endpoint)
 
-	slog.Info("Starting ping", "endpoint" ,cfg.Endpoint)
+	slog.Info("Starting ping", "endpoint", cfg.Endpoint)
 	resp, err := client.Ping(ctx, cmsv1.PingRequest_builder{Message: message}.Build())
 	if err != nil {
 		return err
