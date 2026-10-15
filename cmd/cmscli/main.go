@@ -73,6 +73,13 @@ func main() {
 					return pushArticle(ctx, cfg, cmd.StringArg("mdfile"))
 				}),
 			},
+			{
+				Name: "browse",
+				Usage: "Browses articles on the CMS",
+				Action: needsConfig(func(ctx context.Context, cfg Config, cmd *cli.Command) error {
+					return browseCMS(ctx, cfg)
+				}),
+			},
 		},
 	}
 	if err := cmd.Run(context.Background(), os.Args); err != nil {

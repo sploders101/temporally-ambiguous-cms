@@ -1,0 +1,31 @@
+syntax = "proto3";
+package com.shaunkeys.content.v1;
+
+service ContentService {
+  rpc ListArticles(ListArticlesRequest) returns (ListArticlesResponse);
+  rpc GetArticle(GetArticleRequest) returns (GetArticleResponse);
+}
+
+message ListArticlesRequest {
+  int32 offset = 1;
+  int32 limit = 2;
+}
+message ListArticlesResponse {
+  repeated ArticleMetadata articles = 1;
+}
+
+message GetArticleRequest {
+  string slug = 1;
+}
+message GetArticleResponse {
+  ArticleMetadata article_metadata = 1;
+  string body = 2;
+}
+
+message ArticleMetadata {
+  string id = 1;
+  string slug = 2;
+  string title = 3;
+  string author = 4;
+  string description = 5;
+}
