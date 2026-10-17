@@ -60,6 +60,6 @@ func (m Model) View() tea.View {
 		(m.width/2)+(len(instruction)/2),
 		int(math.Round((float64(m.height) / 2))),
 	)
-	view.Cursor.Color = lipgloss.Color("#FF4000")
+	view.Cursor.Color = m.cursorColor
 	return view
 }

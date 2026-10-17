@@ -5,6 +5,7 @@ import (
 
 	"charm.land/bubbles/v2/list"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
 	"github.com/sploders101/personal-website/pkg/bubbles/splash"
@@ -31,12 +32,16 @@ type Model struct {
 	client     contentv1connect.ContentServiceClient
 	errVisible bool
 	errView    splash.Model
+	listStyle  lipgloss.Style
 	list       list.Model
 }
 
 func New(client contentv1connect.ContentServiceClient) Model {
 	return Model{
 		client: client,
+		errVisible: false,
+		errView: splash.NewSplashScreen("", nil),
+		listStyle: lipgloss.NewStyle().Margin(3),
 		list:   list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0),
 	}
 }
@@ -65,7 +70,8 @@ func (m Model) Init() tea.Cmd {
 
 func (m *Model) SetSize(width int, height int) {
 	m.errView.SetSize(width, height)
-	m.list.SetSize(width, height)
+	frameWidth, frameHeight := m.listStyle.GetFrameSize()
+	m.list.SetSize(width - frameWidth, height - frameHeight)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -94,5 +100,5 @@ func (m Model) View() tea.View {
 	if m.errVisible {
 		return m.errView.View()
 	}
-	return tea.NewView(m.list.View())
+	return tea.NewView(m.listStyle.Render(m.list.View()))
 }
