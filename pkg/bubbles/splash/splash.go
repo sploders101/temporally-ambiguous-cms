@@ -22,10 +22,6 @@ func NewSplashScreen(text string, cursorColor color.Color) Model {
 	}
 }
 
-func (m Model) Init() tea.Cmd {
-	return nil
-}
-
 func (m *Model) SetText(text string) {
 	m.text = text
 }
@@ -61,5 +57,6 @@ func (m Model) View() tea.View {
 		int(math.Round((float64(m.height) / 2))),
 	)
 	view.Cursor.Color = m.cursorColor
+	view.AltScreen = true
 	return view
 }

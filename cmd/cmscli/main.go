@@ -14,7 +14,8 @@ import (
 	"github.com/sploders101/personal-website/internal/env"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/cms/v1/cmsv1connect"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
-	browser "github.com/sploders101/personal-website/pkg/tabrowser"
+	"github.com/sploders101/personal-website/pkg/tabrowser"
+	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
 	"github.com/urfave/cli/v3"
 )
 
@@ -90,7 +91,7 @@ func main() {
 							cfg.Endpoint,
 						)
 
-						model := browser.NewCMSModel(client)
+						model := tabrowser.NewModel(ctx, controller.NewRPCMsgHandler(client))
 						p := tea.NewProgram(model)
 						if _, err := p.Run(); err != nil {
 							return err
