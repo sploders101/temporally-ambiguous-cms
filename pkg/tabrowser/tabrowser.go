@@ -46,6 +46,7 @@ func (model Model) Init() tea.Cmd {
 
 func (model *Model) SetSize(width int, height int) {
 	model.splash.SetSize(width, height)
+	model.posts.SetSize(width, height)
 }
 
 func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -59,6 +60,10 @@ func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "enter" {
 				model.currentScreen = ScreenPosts
 			}
+		case ScreenPosts:
+			var cmd tea.Cmd
+			model.posts, cmd = model.posts.Update(msg)
+			return model, cmd
 		}
 	case tea.WindowSizeMsg:
 		model.SetSize(msg.Width, msg.Height)
