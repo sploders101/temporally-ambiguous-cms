@@ -1,7 +1,6 @@
 package posts
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -96,83 +95,97 @@ func (model Model) View() string {
 		return ""
 	}
 
-	layer := lipgloss.NewLayer("")
-
 	frameWidth, frameHeight := model.containerStyle.GetFrameSize()
-	containerHeight := model.height - frameHeight/2
-	containerWidth := model.width - frameWidth/2
-	height := containerHeight * 2
-	topLines := containerHeight
-	topLinesReal := containerHeight / 2
-	bottomLines := containerHeight
-	bottomLinesReal := containerHeight/2 + (containerHeight % 2)
+	containerWidth, containerHeight := model.width-frameWidth, model.height-frameHeight
 
+	heightRemainder := containerHeight % 2
+	var articlesAbove []string
+	linesAbove := containerHeight / 2
+	var articlesBelow []string
+	linesBelow := containerHeight/2 + heightRemainder
+	var totalContentHeight int
+
+	// Initial centered layout. To be adjusted.
 	selectedArticle := model.renderArticleItem(model.articlesList[model.selectedIndex], true)
 	selectedArticleHeight := lipgloss.Height(selectedArticle)
-	selectedArticleHalfHeight := selectedArticleHeight / 2
-	selectedArticleTopLinesOffset := selectedArticleHalfHeight + (selectedArticleHeight % 2)
-	topLines -= selectedArticleTopLinesOffset
-	topLinesReal -= selectedArticleTopLinesOffset
-	bottomLines -= selectedArticleHalfHeight
-	bottomLinesReal -= selectedArticleHalfHeight
-	layer.AddLayers(lipgloss.NewLayer(selectedArticle).Y(topLines))
-
-	index := model.selectedIndex + 1
-	for bottomLines > 0 {
-		if len(model.articlesList) <= index {
-			break
-		}
-		articleText := model.renderArticleItem(model.articlesList[index], false)
-		layer.AddLayers(
-			lipgloss.NewLayer(articleText).Y(height - bottomLines + model.gap),
-		)
-		bottomLinesOffset := lipgloss.Height(articleText) + model.gap
-		bottomLines -= bottomLinesOffset
-		bottomLinesReal -= bottomLinesOffset
-		index += 1
-	}
-
-	index = model.selectedIndex - 1
-	for topLines > 0 {
-		if index < 0 {
-			break
-		}
-		articleText := model.renderArticleItem(model.articlesList[index], false)
-		articleHeight := lipgloss.Height(articleText)
-		layer.AddLayers(lipgloss.NewLayer(articleText).Y(topLines - articleHeight - model.gap))
-		topLinesOffset := articleHeight + model.gap
-		topLines -= topLinesOffset
-		topLinesReal -= topLinesOffset
-		index -= 1
-	}
-
-	var offset int
-	if topLinesReal > 0 {
-		offset = -topLinesReal - (containerHeight/2)
-	} else if bottomLinesReal > 0 {
-		offset = bottomLinesReal
+	selectedArticleHeightHalf := selectedArticleHeight / 2
+	selectedArticleHeightRemainder := selectedArticleHeight % 2
+	if heightRemainder == 1 && selectedArticleHeightRemainder == 1 {
+		// Prefer downward movement to compensate for double-remainders
+		linesAbove -= selectedArticleHeightHalf
+		linesBelow -= selectedArticleHeightHalf + selectedArticleHeightRemainder
 	} else {
-		offset = -(containerHeight / 2)
+		linesAbove -= selectedArticleHeightHalf + selectedArticleHeightRemainder
+		linesBelow -= selectedArticleHeightHalf
+	}
+	// Offset will determine where we start rendering. This is the Y coordinate for the selected article.
+	// All other articles will spread outward from there.
+	offset := linesAbove
+	totalContentHeight = selectedArticleHeight
+
+	// Using a flip-flop here so we can continue the loop in whatever direction is needed to fill the dead space.
+	// I'm not totally sold on this design yet, but I've never really done much layout work before...
+	var direction bool
+	var downDone bool
+	var upDone bool
+	for (linesAbove+linesBelow > 0) && !(downDone && upDone) {
+		if direction {
+			// Go down
+			newArticleIndex := model.selectedIndex + 1 + len(articlesBelow)
+			if len(model.articlesList) <= newArticleIndex {
+				downDone = true
+				direction = !direction
+				continue
+			}
+			newArticle := model.renderArticleItem(model.articlesList[newArticleIndex], false)
+			newArticleHeight := lipgloss.Height(newArticle)
+			totalContentHeight += (newArticleHeight + model.gap)
+			linesBelow -= (newArticleHeight + model.gap)
+			articlesBelow = append(articlesBelow, newArticle)
+		} else {
+			// Go up
+			newArticleIndex := model.selectedIndex - 1 - len(articlesAbove)
+			if newArticleIndex < 0 {
+				upDone = true
+				direction = !direction
+				continue
+			}
+			newArticle := model.renderArticleItem(model.articlesList[newArticleIndex], false)
+			newArticleHeight := lipgloss.Height(newArticle)
+			totalContentHeight += (newArticleHeight + model.gap)
+			linesAbove -= (newArticleHeight + model.gap)
+			articlesAbove = append(articlesAbove, newArticle)
+		}
+		direction = !direction
 	}
 
-	canvas := lipgloss.NewCanvas(containerWidth, containerHeight)
-	canvas.Compose(
-		lipgloss.NewCompositor(
-			layer.Y(offset),
-			lipgloss.NewLayer(fmt.Sprintf("(%v, %v, %v)", offset, topLinesReal, bottomLinesReal)),
-		),
+	if linesAbove > 0 || totalContentHeight < containerHeight {
+		offset -= linesAbove
+	} else if linesBelow > 0 {
+		offset += linesBelow
+	}
+
+	compositor := lipgloss.NewCompositor()
+
+	compositor.AddLayers(lipgloss.NewLayer(selectedArticle).Y(offset))
+
+	aboveOffset := offset
+	for _, article := range articlesAbove {
+		articleHeight := lipgloss.Height(article)
+		compositor.AddLayers(lipgloss.NewLayer(article).Y(aboveOffset - model.gap - articleHeight))
+		aboveOffset -= (model.gap + articleHeight)
+	}
+
+	belowOffset := offset + selectedArticleHeight
+	for _, article := range articlesBelow {
+		articleHeight := lipgloss.Height(article)
+		compositor.AddLayers(lipgloss.NewLayer(article).Y(belowOffset + model.gap))
+		belowOffset += (model.gap + articleHeight)
+	}
+
+	return model.containerStyle.Render(
+		lipgloss.NewCanvas(containerWidth, containerHeight).Compose(compositor).Render(),
 	)
-
-	return model.containerStyle.MaxHeight(containerHeight).
-		MaxWidth(containerWidth).
-		Render(canvas.Render())
-}
-
-func (model Model) getArticleItemHeight(article *contentv1.ArticleMetadata, selected bool) int {
-	// TODO: This can be improved. I don't need to render the styles to do this, but I'm not done
-	// with article rendering yet, so this consolidates the logic.
-	renderedArticle := model.renderArticleItem(article, selected)
-	return lipgloss.Height(renderedArticle)
 }
 
 func (model Model) renderArticleItem(article *contentv1.ArticleMetadata, selected bool) string {
