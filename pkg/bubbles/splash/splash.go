@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 )
 
 type Model struct {
@@ -15,10 +16,9 @@ type Model struct {
 	cursorColor color.Color
 }
 
-func NewSplashScreen(text string, cursorColor color.Color) Model {
+func NewSplashScreen(text string) Model {
 	return Model{
-		text:        text,
-		cursorColor: cursorColor,
+		text: text,
 	}
 }
 
@@ -29,6 +29,10 @@ func (m *Model) SetText(text string) {
 func (m *Model) SetSize(width int, height int) {
 	m.width = width
 	m.height = height
+}
+
+func (m *Model) SetTheme(theme themes.Theme) {
+	m.cursorColor = theme.PrimaryColor
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {

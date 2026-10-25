@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
+	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
 )
 
@@ -26,29 +27,33 @@ type Model struct {
 	containerStyle  lipgloss.Style
 	unselectedStyle lipgloss.Style
 	selectedStyle   lipgloss.Style
+	postTitleStyle  lipgloss.Style
+	postDescStyle   lipgloss.Style
 }
 
 func New() Model {
-	return Model{
-		chunkSize:      DEFAULT_CHUNK_SIZE,
-		beforeTime:     time.Now(),
-		gap:            1,
-		containerStyle: lipgloss.NewStyle().Margin(1),
-		unselectedStyle: lipgloss.NewStyle().
-			Border(lipgloss.ThickBorder(), false, false, false, true).
-			BorderForeground(lipgloss.Color("#404040")),
-		selectedStyle: lipgloss.NewStyle().
-			Border(lipgloss.ThickBorder(), false, false, false, true).
-			BorderForeground(lipgloss.Color("#FF4000")),
+	model := Model{
+		chunkSize:  DEFAULT_CHUNK_SIZE,
+		beforeTime: time.Now(),
+		gap:        1,
 	}
+	return model
 }
 
 func (model *Model) SetSize(width int, height int) {
-	model.width = width
-	model.height = height
+	model.width, model.height = width, height
 }
 
-func (model *Model) UpdateScroll() {
+func (model *Model) SetTheme(theme themes.Theme) {
+	model.containerStyle = lipgloss.NewStyle().Margin(1)
+	model.unselectedStyle = lipgloss.NewStyle().
+		Border(lipgloss.ThickBorder(), false, false, false, true).
+		BorderForeground(theme.GetUnfocusedPostColor())
+	model.selectedStyle = lipgloss.NewStyle().
+		Border(lipgloss.ThickBorder(), false, false, false, true).
+		BorderForeground(theme.GetFocusedPostColor())
+	model.postTitleStyle = lipgloss.NewStyle().Underline(true).Foreground(theme.GetPostTitleColor())
+	model.postDescStyle = lipgloss.NewStyle().Foreground(theme.GetPostDescriptionColor())
 }
 
 func (model Model) Init() tea.Cmd {
@@ -64,18 +69,16 @@ func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up":
-			model.selectedIndex -= 1
-			if model.selectedIndex < 0 {
-				if len(model.articlesList) == 0 {
-					model.selectedIndex = 0
-				} else {
-					model.selectedIndex = len(model.articlesList) - 1
-				}
+			if model.selectedIndex-1 < 0 {
+				model.selectedIndex = 0
+			} else {
+				model.selectedIndex -= 1
 			}
 		case "down":
-			model.selectedIndex += 1
-			if model.selectedIndex >= len(model.articlesList) {
-				model.selectedIndex = 0
+			if model.selectedIndex+1 >= len(model.articlesList) {
+				model.selectedIndex = len(model.articlesList) - 1
+			} else {
+				model.selectedIndex += 1
 			}
 		}
 	case controller.ControllerResponse:
@@ -109,15 +112,8 @@ func (model Model) View() string {
 	selectedArticle := model.renderArticleItem(model.articlesList[model.selectedIndex], true)
 	selectedArticleHeight := lipgloss.Height(selectedArticle)
 	selectedArticleHeightHalf := selectedArticleHeight / 2
-	selectedArticleHeightRemainder := selectedArticleHeight % 2
-	if heightRemainder == 1 && selectedArticleHeightRemainder == 1 {
-		// Prefer downward movement to compensate for double-remainders
-		linesAbove -= selectedArticleHeightHalf
-		linesBelow -= selectedArticleHeightHalf + selectedArticleHeightRemainder
-	} else {
-		linesAbove -= selectedArticleHeightHalf + selectedArticleHeightRemainder
-		linesBelow -= selectedArticleHeightHalf
-	}
+	linesAbove -= selectedArticleHeightHalf + selectedArticleHeight%2
+	linesBelow -= selectedArticleHeightHalf
 	// Offset will determine where we start rendering. This is the Y coordinate for the selected article.
 	// All other articles will spread outward from there.
 	offset := linesAbove
@@ -128,7 +124,7 @@ func (model Model) View() string {
 	var direction bool
 	var downDone bool
 	var upDone bool
-	for (linesAbove+linesBelow > 0) && !(downDone && upDone) {
+	for (linesAbove+linesBelow > 0 || direction) && !(downDone && upDone) {
 		if direction {
 			// Go down
 			newArticleIndex := model.selectedIndex + 1 + len(articlesBelow)
@@ -183,9 +179,10 @@ func (model Model) View() string {
 		belowOffset += (model.gap + articleHeight)
 	}
 
-	return model.containerStyle.Render(
-		lipgloss.NewCanvas(containerWidth, containerHeight).Compose(compositor).Render(),
-	)
+	return model.containerStyle.
+		Width(model.width - model.containerStyle.GetHorizontalMargins()).
+		Height(model.height - model.containerStyle.GetVerticalMargins()).
+		Render(lipgloss.NewCanvas(containerWidth, containerHeight).Compose(compositor).Render())
 }
 
 func (model Model) renderArticleItem(article *contentv1.ArticleMetadata, selected bool) string {
@@ -201,9 +198,11 @@ func (model Model) renderArticleItem(article *contentv1.ArticleMetadata, selecte
 
 	title := strings.TrimSpace(article.GetTitle())
 	title = lipgloss.Wrap(title, width, "")
+	title = model.postTitleStyle.Render(title)
 
 	desc := strings.TrimSpace(article.GetDescription())
 	desc = lipgloss.Wrap(desc, width, "")
+	desc = model.postDescStyle.Render(desc)
 	if selected {
 		return model.selectedStyle.Render(
 			lipgloss.JoinVertical(lipgloss.Left, title, desc),

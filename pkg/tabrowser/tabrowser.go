@@ -4,9 +4,9 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/sploders101/personal-website/pkg/bubbles/posts"
 	"github.com/sploders101/personal-website/pkg/bubbles/splash"
+	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
 )
 
@@ -29,12 +29,14 @@ type Model struct {
 
 func NewModel(ctx context.Context, handler controller.HandlerFunc) Model {
 	controllerIn, controllerOut := controller.NewController(ctx, handler)
-	return Model{
+	model := Model{
 		controllerIn:  controllerIn,
 		controllerOut: controllerOut,
-		splash:        splash.NewSplashScreen("Temporally Ambiguous Browser", lipgloss.Color("#FF4000")),
+		splash:        splash.NewSplashScreen("Temporally Ambiguous Browser"),
 		posts:         posts.New(),
 	}
+	model.SetTheme(themes.DefaultTheme)
+	return model
 }
 
 func (model Model) Init() tea.Cmd {
@@ -47,6 +49,11 @@ func (model Model) Init() tea.Cmd {
 func (model *Model) SetSize(width int, height int) {
 	model.splash.SetSize(width, height)
 	model.posts.SetSize(width, height)
+}
+
+func (model *Model) SetTheme(theme themes.Theme) {
+	model.splash.SetTheme(theme)
+	model.posts.SetTheme(theme)
 }
 
 func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
