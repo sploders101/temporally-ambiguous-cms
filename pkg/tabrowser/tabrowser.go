@@ -4,6 +4,7 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/sploders101/personal-website/pkg/bubbles/postlist"
 	"github.com/sploders101/personal-website/pkg/bubbles/splash"
 	"github.com/sploders101/personal-website/pkg/bubbles/themes"
@@ -22,6 +23,8 @@ const (
 type Model struct {
 	controllerIn  chan<- controller.ControllerCommand
 	controllerOut <-chan controller.ControllerResponse
+	width         int
+	height        int
 	currentScreen int
 	splash        splash.Model
 	posts         postlist.Model
@@ -47,6 +50,7 @@ func (model Model) Init() tea.Cmd {
 }
 
 func (model *Model) SetSize(width int, height int) {
+	model.width, model.height = width, height
 	model.splash.SetSize(width, height)
 	model.posts.SetSize(width, height)
 }
@@ -66,11 +70,13 @@ func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case ScreenSplash:
 			if msg.String() == "enter" {
 				model.currentScreen = ScreenPosts
+				cmd := model.posts.SetVisibility(true)
+				return model, controller.TrackRequest(cmd, ComponentPosts)
 			}
 		case ScreenPosts:
 			var cmd tea.Cmd
 			model.posts, cmd = model.posts.Update(msg)
-			return model, cmd
+			return model, controller.TrackRequest(cmd, ComponentPosts)
 		}
 	case tea.WindowSizeMsg:
 		model.SetSize(msg.Width, msg.Height)
@@ -83,6 +89,7 @@ func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch index {
 			case ComponentPosts:
 				model.posts, cmd = model.posts.Update(msg)
+				cmd = controller.TrackRequest(cmd, ComponentPosts)
 			}
 			return model, tea.Batch(model.listenControllerResponse, cmd)
 		} else {
@@ -102,15 +109,18 @@ func (model Model) listenControllerResponse() tea.Msg {
 }
 
 func (model Model) View() tea.View {
-	view := tea.NewView("")
-	view.AltScreen = true
-
-	switch model.currentScreen {
-	case ScreenSplash:
+	if model.currentScreen == ScreenSplash {
 		return model.splash.View()
-	case ScreenPosts:
-		view.SetContent(model.posts.View())
 	}
+
+	compositor := lipgloss.NewCompositor()
+	switch model.currentScreen {
+	case ScreenPosts:
+		compositor.AddLayers(lipgloss.NewLayer(model.posts.View()))
+	}
+
+	view := tea.NewView(lipgloss.NewCanvas(model.width, model.height).Compose(compositor).Render())
+	view.AltScreen = true
 
 	return view
 }

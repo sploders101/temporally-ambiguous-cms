@@ -24,11 +24,24 @@ func (command ControllerCommand) AppendIndex(index int) ControllerCommand {
 }
 
 func TrackRequest(cmd tea.Cmd, index int) tea.Cmd {
+	if cmd == nil {
+		return nil
+	}
 	return func() tea.Msg {
-		msg := cmd()
-		if msg, ok := msg.(ControllerCommand); ok {
-			return msg.AppendIndex(index)
+		return wrapMsg(cmd(), index)
+	}
+}
+
+func wrapMsg(msg tea.Msg, index int) tea.Msg {
+	switch msg := msg.(type) {
+	case tea.BatchMsg:
+		for i := range len(msg) {
+			msg[i] = TrackRequest(msg[i], index)
 		}
+		return msg
+	case ControllerCommand:
+		return msg.AppendIndex(index)
+	default:
 		return msg
 	}
 }

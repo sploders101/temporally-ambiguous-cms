@@ -17,6 +17,8 @@ import (
 	"github.com/sploders101/personal-website/pkg/tabrowser"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/browsing"
+	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/navigation"
+	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/utilsctrl"
 	"github.com/urfave/cli/v3"
 )
 
@@ -94,6 +96,8 @@ func main() {
 
 						model := tabrowser.NewModel(ctx, []controller.Controller{
 							browsing.NewArticleIndexController(client),
+							navigation.NewNavigationController(client),
+							utilsctrl.NewUtilityController(),
 						})
 						p := tea.NewProgram(model)
 						if _, err := p.Run(); err != nil {

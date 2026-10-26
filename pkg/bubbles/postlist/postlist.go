@@ -7,12 +7,17 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
+	"github.com/sploders101/personal-website/pkg/bubbles/spinner"
 	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/browsing"
 )
 
 const DEFAULT_CHUNK_SIZE = 50
+
+const (
+	ComponentSpinner int = iota
+)
 
 type Model struct {
 	width  int
@@ -30,6 +35,8 @@ type Model struct {
 	selectedStyle   lipgloss.Style
 	postTitleStyle  lipgloss.Style
 	postDescStyle   lipgloss.Style
+
+	spinner spinner.Model
 }
 
 func New() Model {
@@ -37,6 +44,7 @@ func New() Model {
 		chunkSize:  DEFAULT_CHUNK_SIZE,
 		beforeTime: time.Now(),
 		gap:        1,
+		spinner:    spinner.New(),
 	}
 	return model
 }
@@ -55,14 +63,22 @@ func (model *Model) SetTheme(theme themes.Theme) {
 		BorderForeground(theme.GetFocusedPostColor())
 	model.postTitleStyle = lipgloss.NewStyle().Underline(true).Foreground(theme.GetPostTitleColor())
 	model.postDescStyle = lipgloss.NewStyle().Foreground(theme.GetPostDescriptionColor())
+	model.spinner.SetTheme(theme)
+}
+
+func (model *Model) SetVisibility(visible bool) tea.Cmd {
+	return controller.TrackRequest(model.spinner.SetVisibility(visible), ComponentSpinner)
 }
 
 func (model Model) Init() tea.Cmd {
-	return controller.CallController(browsing.GetArticles{
-		BeforeTime: time.Now(),
-		Offset:     0,
-		Limit:      model.chunkSize,
-	})
+	return tea.Batch(
+		controller.CallController(browsing.GetArticles{
+			BeforeTime: time.Now(),
+			Offset:     0,
+			Limit:      model.chunkSize,
+		}),
+		controller.TrackRequest(model.spinner.Init(), ComponentSpinner),
+	)
 }
 
 func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -84,9 +100,18 @@ func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case "enter":
 		}
 	case controller.ControllerResponse:
-		if _, ok, msg := msg.PopIndex(); !ok {
+		index, ok, msg := msg.PopIndex()
+		if ok {
+			switch index {
+			case ComponentSpinner:
+				var cmd tea.Cmd
+				model.spinner, cmd = model.spinner.Update(msg)
+				return model, controller.TrackRequest(cmd, ComponentSpinner)
+			}
+		} else {
 			switch msg := msg.Msg.(type) {
 			case browsing.UpdateArticles:
+				model.spinner.SetVisibility(false)
 				model.articlesList = msg.Articles
 			}
 		}
@@ -97,7 +122,12 @@ func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (model Model) View() string {
 	if len(model.articlesList) <= model.selectedIndex {
-		return ""
+		width := model.width - model.containerStyle.GetHorizontalMargins()
+		height := model.height - model.containerStyle.GetVerticalMargins()
+		return model.containerStyle.
+			Width(width).
+			Height(height).
+			Render(lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, model.spinner.View()))
 	}
 
 	frameWidth, frameHeight := model.containerStyle.GetFrameSize()
