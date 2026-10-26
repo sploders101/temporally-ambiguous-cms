@@ -1,4 +1,4 @@
-package posts
+package postlist
 
 import (
 	"strings"
@@ -9,6 +9,7 @@ import (
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
 	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
+	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/browsing"
 )
 
 const DEFAULT_CHUNK_SIZE = 50
@@ -57,7 +58,7 @@ func (model *Model) SetTheme(theme themes.Theme) {
 }
 
 func (model Model) Init() tea.Cmd {
-	return controller.CallController(controller.GetArticles{
+	return controller.CallController(browsing.GetArticles{
 		BeforeTime: time.Now(),
 		Offset:     0,
 		Limit:      model.chunkSize,
@@ -68,23 +69,24 @@ func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up":
+		case "up", "k":
 			if model.selectedIndex-1 < 0 {
 				model.selectedIndex = 0
 			} else {
 				model.selectedIndex -= 1
 			}
-		case "down":
+		case "down", "j":
 			if model.selectedIndex+1 >= len(model.articlesList) {
 				model.selectedIndex = len(model.articlesList) - 1
 			} else {
 				model.selectedIndex += 1
 			}
+		case "enter":
 		}
 	case controller.ControllerResponse:
 		if _, ok, msg := msg.PopIndex(); !ok {
 			switch msg := msg.Msg.(type) {
-			case controller.UpdateArticles:
+			case browsing.UpdateArticles:
 				model.articlesList = msg.Articles
 			}
 		}

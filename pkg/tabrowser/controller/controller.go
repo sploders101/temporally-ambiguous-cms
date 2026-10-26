@@ -2,20 +2,15 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"sync"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
-	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
-	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
 )
 
-var (
-	ErrUnknownRequest = errors.New("unknown request")
-)
-
-type HandlerFunc func(ctx context.Context, req ControllerCommand, msgChan chan<- ControllerResponse) error
+type Controller interface {
+	Init(ctx context.Context, respChan chan<- ControllerResponse)
+	Handle(req ControllerCommand)
+}
 
 // A type of `tea.Msg` intended to forward requests to the controller
 type ControllerCommand struct {
@@ -56,21 +51,6 @@ func (command ControllerResponse) PopIndex() (index int, hadIndex bool, response
 	return index, true, command
 }
 
-// Initializes the application. The root component should emit this event as the last step of initialization.
-//
-// The controller will make a series of requests and emit the initial states of the application. Until these
-// events come, all states should be considered "loading".
-type GetArticles struct {
-	BeforeTime time.Time
-	Offset     int
-	Limit      int
-}
-type UpdateArticles struct {
-	GetArticles
-	Articles []*contentv1.ArticleMetadata
-}
-type ShowError struct{ err error }
-
 // Used to bubble an event up to the controller.
 //
 // The root component should handle `ControllerCommand` messages by dispatching them to the
@@ -83,9 +63,16 @@ func CallController(msg tea.Msg) tea.Cmd {
 }
 
 // This function keeps track of the application state, pushing down updates
-func NewController(ctx context.Context, handler HandlerFunc) (chan<- ControllerCommand, <-chan ControllerResponse) {
+func StartControllerLoop(
+	ctx context.Context,
+	controllers []Controller,
+) (chan<- ControllerCommand, <-chan ControllerResponse) {
 	requestChan := make(chan ControllerCommand, 1)
 	msgChan := make(chan ControllerResponse, 1)
+
+	for _, controller := range controllers {
+		controller.Init(ctx, msgChan)
+	}
 
 	go func() {
 		var wg sync.WaitGroup
@@ -104,8 +91,8 @@ func NewController(ctx context.Context, handler HandlerFunc) (chan<- ControllerC
 				}
 				// Handle request, send response through msgChan to update UI
 				wg.Go(func() {
-					if err := handler(ctx, req, msgChan); err != nil {
-						msgChan <- ControllerResponse{Msg: ShowError{err}}
+					for _, controller := range controllers {
+						controller.Handle(req)
 					}
 				})
 			case <-ctx.Done():
@@ -115,30 +102,4 @@ func NewController(ctx context.Context, handler HandlerFunc) (chan<- ControllerC
 	}()
 
 	return requestChan, msgChan
-}
-
-func NewRPCMsgHandler(client contentv1connect.ContentServiceClient) HandlerFunc {
-	return func(ctx context.Context, req ControllerCommand, respChan chan<- ControllerResponse) error {
-		switch msg := req.Msg.(type) {
-		case GetArticles:
-			articles, err := client.ListArticles(ctx, contentv1.ListArticlesRequest_builder{
-				Offset: int32(msg.Offset),
-				Limit:  int32(msg.Limit),
-			}.Build())
-			if err != nil {
-				return err
-			}
-
-			respChan <- ControllerResponse{
-				IndexChain: req.IndexChain,
-				Msg: UpdateArticles{
-					GetArticles: msg,
-					Articles:    articles.GetArticles(),
-				},
-			}
-		default:
-			return ErrUnknownRequest
-		}
-		return nil
-	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/sploders101/personal-website/pkg/bubbles/posts"
+	"github.com/sploders101/personal-website/pkg/bubbles/postlist"
 	"github.com/sploders101/personal-website/pkg/bubbles/splash"
 	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
@@ -24,16 +24,16 @@ type Model struct {
 	controllerOut <-chan controller.ControllerResponse
 	currentScreen int
 	splash        splash.Model
-	posts         posts.Model
+	posts         postlist.Model
 }
 
-func NewModel(ctx context.Context, handler controller.HandlerFunc) Model {
-	controllerIn, controllerOut := controller.NewController(ctx, handler)
+func NewModel(ctx context.Context, controllers []controller.Controller) Model {
+	controllerIn, controllerOut := controller.StartControllerLoop(ctx, controllers)
 	model := Model{
 		controllerIn:  controllerIn,
 		controllerOut: controllerOut,
 		splash:        splash.NewSplashScreen("Temporally Ambiguous Browser"),
-		posts:         posts.New(),
+		posts:         postlist.New(),
 	}
 	model.SetTheme(themes.DefaultTheme)
 	return model

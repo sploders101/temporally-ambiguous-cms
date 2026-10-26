@@ -11,7 +11,6 @@ linters:
     - errorlint
     - errchkjson
     - embeddedstructfieldcheck
-    - containedctx
   settings:
     exhaustruct_v5:
       enforce-patterns:

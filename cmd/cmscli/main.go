@@ -16,6 +16,7 @@ import (
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
 	"github.com/sploders101/personal-website/pkg/tabrowser"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
+	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/browsing"
 	"github.com/urfave/cli/v3"
 )
 
@@ -91,7 +92,9 @@ func main() {
 							cfg.Endpoint,
 						)
 
-						model := tabrowser.NewModel(ctx, controller.NewRPCMsgHandler(client))
+						model := tabrowser.NewModel(ctx, []controller.Controller{
+							browsing.NewArticleIndexController(client),
+						})
 						p := tea.NewProgram(model)
 						if _, err := p.Run(); err != nil {
 							return err
