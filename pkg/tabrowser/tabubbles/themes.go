@@ -1,4 +1,4 @@
-package themes
+package tabubbles
 
 import (
 	"image/color"
@@ -14,10 +14,6 @@ var DefaultTheme = Theme{
 	MutedColor:     lipgloss.Color("#404040"),
 }
 
-type Themable interface {
-	SetTheme(theme Theme)
-}
-
 type Theme struct {
 	PrimaryColor   color.Color
 	SecondaryColor color.Color
@@ -31,7 +27,7 @@ type Theme struct {
 	PostDescriptionColor color.Color
 }
 
-func first(colors ...color.Color) color.Color {
+func firstColor(colors ...color.Color) color.Color {
 	for _, color := range colors {
 		if color != nil {
 			return color
@@ -41,17 +37,17 @@ func first(colors ...color.Color) color.Color {
 }
 
 func (theme Theme) GetUnfocusedPostColor() color.Color {
-	return first(theme.UnfocusedPostColor, theme.MutedColor)
+	return firstColor(theme.UnfocusedPostColor, theme.MutedColor)
 }
 
 func (theme Theme) GetFocusedPostColor() color.Color {
-	return first(theme.FocusedPostColor, theme.PrimaryColor)
+	return firstColor(theme.FocusedPostColor, theme.PrimaryColor)
 }
 
 func (theme Theme) GetPostTitleColor() color.Color {
-	return first(theme.PostTitleColor, theme.PrimaryColor)
+	return firstColor(theme.PostTitleColor, theme.PrimaryColor)
 }
 
 func (theme Theme) GetPostDescriptionColor() color.Color {
-	return first(theme.PostDescriptionColor, theme.TextColor)
+	return firstColor(theme.PostDescriptionColor, theme.TextColor)
 }

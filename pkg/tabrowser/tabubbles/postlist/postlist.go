@@ -7,10 +7,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
-	"github.com/sploders101/personal-website/pkg/bubbles/spinner"
-	"github.com/sploders101/personal-website/pkg/bubbles/themes"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/browsing"
+	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/navigation"
+	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles"
+	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles/spinner"
 )
 
 const DEFAULT_CHUNK_SIZE = 50
@@ -36,11 +37,11 @@ type Model struct {
 	postTitleStyle  lipgloss.Style
 	postDescStyle   lipgloss.Style
 
-	spinner spinner.Model
+	spinner *spinner.Model
 }
 
-func New() Model {
-	model := Model{
+func New() *Model {
+	model := &Model{
 		chunkSize:  DEFAULT_CHUNK_SIZE,
 		beforeTime: time.Now(),
 		gap:        1,
@@ -53,7 +54,7 @@ func (model *Model) SetSize(width int, height int) {
 	model.width, model.height = width, height
 }
 
-func (model *Model) SetTheme(theme themes.Theme) {
+func (model *Model) SetTheme(theme tabubbles.Theme) {
 	model.containerStyle = lipgloss.NewStyle().Margin(1)
 	model.unselectedStyle = lipgloss.NewStyle().
 		Border(lipgloss.ThickBorder(), false, false, false, true).
@@ -66,22 +67,20 @@ func (model *Model) SetTheme(theme themes.Theme) {
 	model.spinner.SetTheme(theme)
 }
 
-func (model *Model) SetVisibility(visible bool) tea.Cmd {
-	return controller.TrackRequest(model.spinner.SetVisibility(visible), ComponentSpinner)
+func (model *Model) SetVisibility(visible bool, cmds tabubbles.CmdCollector) {
+	model.spinner.SetVisibility(visible, cmds.WithIndex(ComponentSpinner))
 }
 
-func (model Model) Init() tea.Cmd {
-	return tea.Batch(
-		controller.CallController(browsing.GetArticles{
-			BeforeTime: time.Now(),
-			Offset:     0,
-			Limit:      model.chunkSize,
-		}),
-		controller.TrackRequest(model.spinner.Init(), ComponentSpinner),
-	)
+func (model *Model) Init(cmds tabubbles.CmdCollector) {
+	cmds.Push(controller.CallController(browsing.GetArticles{
+		BeforeTime: time.Now(),
+		Offset:     0,
+		Limit:      model.chunkSize,
+	}))
+	model.spinner.Init(cmds.WithIndex(ComponentSpinner))
 }
 
-func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (model *Model) Update(msg tea.Msg, cmds tabubbles.CmdCollector) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -98,26 +97,28 @@ func (model Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				model.selectedIndex += 1
 			}
 		case "enter":
+			if len(model.articlesList) > model.selectedIndex {
+				article := model.articlesList[model.selectedIndex]
+				cmds.Push(controller.CallController(navigation.NavigateArticle{
+					Slug: article.GetSlug(),
+				}))
+			}
 		}
 	case controller.ControllerResponse:
 		index, ok, msg := msg.PopIndex()
 		if ok {
 			switch index {
 			case ComponentSpinner:
-				var cmd tea.Cmd
-				model.spinner, cmd = model.spinner.Update(msg)
-				return model, controller.TrackRequest(cmd, ComponentSpinner)
+				model.spinner.Update(msg, cmds.WithIndex(ComponentSpinner))
 			}
 		} else {
 			switch msg := msg.Msg.(type) {
 			case browsing.UpdateArticles:
-				model.spinner.SetVisibility(false)
+				model.spinner.SetVisibility(false, cmds.WithIndex(ComponentSpinner))
 				model.articlesList = msg.Articles
 			}
 		}
 	}
-
-	return model, nil
 }
 
 func (model Model) View() string {

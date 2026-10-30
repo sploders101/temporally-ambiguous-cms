@@ -6,18 +6,20 @@ import contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com
 //
 // Begins navigation to the requested article
 type NavigateArticle struct {
-	slug string
+	Slug string
 }
 
 // Direction: <-controller
 //
 // Indicates that a request to navigate has been received, and the article is being fetched
-type DisplayArticleLoading struct{}
+type DisplaySpinner struct {
+	Visibility bool
+}
 
 // Direction: <-controller
 //
 // The requested article has been fetched and should now be displayed.
 type DisplayArticle struct {
-	meta      *contentv1.ArticleMetadata
-	mdContent string
+	Meta      *contentv1.ArticleMetadata
+	MdContent string
 }

@@ -55,12 +55,11 @@ type ControllerResponse struct {
 // If no indexes were left, `hadIndex` will be `false`.
 // `response` contains the response with the current index removed
 func (command ControllerResponse) PopIndex() (index int, hadIndex bool, response ControllerResponse) {
-	lastIndex := len(command.IndexChain) - 1
-	if lastIndex == -1 {
+	if len(command.IndexChain) == 0 {
 		return 0, false, command
 	}
-	index = command.IndexChain[lastIndex]
-	command.IndexChain = command.IndexChain[:lastIndex]
+	index = command.IndexChain[0]
+	command.IndexChain = command.IndexChain[1:]
 	return index, true, command
 }
 

@@ -2,7 +2,6 @@ package browsing
 
 import (
 	"context"
-	"log/slog"
 
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
@@ -37,7 +36,7 @@ func (aic *ArticleIndexController) Handle(req controller.ControllerCommand) {
 			Limit:  int32(msg.Limit),
 		}.Build())
 		if err != nil {
-			slog.Error("Error fetching articles", "error", err)
+			// TODO: Present to user
 			return
 		}
 
