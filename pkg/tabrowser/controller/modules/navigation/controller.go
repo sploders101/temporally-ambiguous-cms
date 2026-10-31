@@ -30,32 +30,41 @@ func (nav *NavigationController) Init(
 	nav.respChan = respChan
 }
 
-func (nav *NavigationController) Handle(req controller.ControllerCommand) {
+func (nav *NavigationController) Handle(wg *sync.WaitGroup, req controller.ControllerCommand) bool {
 	switch msg := req.Msg.(type) {
 	case NavigateArticle:
-		nav.navMutex.Lock()
-		defer nav.navMutex.Unlock()
-		nav.respChan <- controller.ControllerResponse{
-			Msg: DisplaySpinner{
-				Visibility: true,
-			},
-		}
-		article, err := nav.client.GetArticle(nav.ctx, contentv1.GetArticleRequest_builder{
-			Slug: msg.Slug,
-		}.Build())
-		if err != nil {
-			// TODO: Present to user
-		}
-		nav.respChan <- controller.ControllerResponse{
-			Msg: DisplayArticle{
-				Meta:      article.GetArticleMetadata(),
-				MdContent: article.GetBody(),
-			},
-		}
-		nav.respChan <- controller.ControllerResponse{
-			Msg: DisplaySpinner{
-				Visibility: false,
-			},
-		}
+		wg.Go(func() { nav.HandleNavigateArticle(req, msg) })
+		return true
+	}
+	return false
+}
+
+func (nav *NavigationController) HandleNavigateArticle(
+	req controller.ControllerCommand,
+	msg NavigateArticle,
+) {
+	nav.navMutex.Lock()
+	defer nav.navMutex.Unlock()
+	nav.respChan <- controller.ControllerResponse{
+		Msg: DisplaySpinner{
+			Visibility: true,
+		},
+	}
+	article, err := nav.client.GetArticle(nav.ctx, contentv1.GetArticleRequest_builder{
+		Slug: msg.Slug,
+	}.Build())
+	if err != nil {
+		// TODO: Present to user
+	}
+	nav.respChan <- controller.ControllerResponse{
+		Msg: DisplayArticle{
+			Meta:      article.GetArticleMetadata(),
+			MdContent: article.GetBody(),
+		},
+	}
+	nav.respChan <- controller.ControllerResponse{
+		Msg: DisplaySpinner{
+			Visibility: false,
+		},
 	}
 }

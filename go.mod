@@ -12,7 +12,6 @@ tool (
 )
 
 require (
-	charm.land/bubbles/v2 v2.2.1
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.6
 	charm.land/log/v2 v2.0.1
@@ -41,6 +40,7 @@ require (
 
 require (
 	cel.dev/expr v0.25.2 // indirect
+	charm.land/bubbles/v2 v2.2.1 // indirect
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.23.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
@@ -184,7 +184,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/sahilm/fuzzy v0.1.3 // indirect
 	github.com/sajari/fuzzy v1.0.0 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/sethvargo/go-retry v0.4.0 // indirect

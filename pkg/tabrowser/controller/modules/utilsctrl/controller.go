@@ -2,6 +2,7 @@ package utilsctrl
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
@@ -24,28 +25,37 @@ func (util *UtilityController) Init(
 	util.respChan = respChan
 }
 
-func (util *UtilityController) Handle(req controller.ControllerCommand) {
+func (util *UtilityController) Handle(wg *sync.WaitGroup, req controller.ControllerCommand) bool {
 	switch msg := req.Msg.(type) {
 	case TickerRequest:
-		if msg.Time != (time.Time{}) {
-			select {
-			case <-util.ctx.Done():
-			case <-msg.Cancel:
-			case <-time.After(time.Until(msg.Time)):
-				util.respChan <- controller.ControllerResponse{
-					IndexChain: req.IndexChain,
-					Msg:        TickerResponse{Msg: msg.Msg},
-				}
+		wg.Go(func() { util.HandleTickerRequest(req, msg) })
+		return true
+	}
+	return false
+}
+
+func (util *UtilityController) HandleTickerRequest(
+	req controller.ControllerCommand,
+	msg TickerRequest,
+) {
+	if msg.Time != (time.Time{}) {
+		select {
+		case <-util.ctx.Done():
+		case <-msg.Cancel:
+		case <-time.After(time.Until(msg.Time)):
+			util.respChan <- controller.ControllerResponse{
+				IndexChain: req.IndexChain,
+				Msg:        TickerResponse{Msg: msg.Msg},
 			}
-		} else {
-			select {
-			case <-util.ctx.Done():
-			case <-msg.Cancel:
-			case <-time.After(msg.Duration):
-				util.respChan <- controller.ControllerResponse{
-					IndexChain: req.IndexChain,
-					Msg:        TickerResponse{Msg: msg.Msg},
-				}
+		}
+	} else {
+		select {
+		case <-util.ctx.Done():
+		case <-msg.Cancel:
+		case <-time.After(msg.Duration):
+			util.respChan <- controller.ControllerResponse{
+				IndexChain: req.IndexChain,
+				Msg:        TickerResponse{Msg: msg.Msg},
 			}
 		}
 	}

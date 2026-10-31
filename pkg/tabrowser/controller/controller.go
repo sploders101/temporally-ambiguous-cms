@@ -9,7 +9,7 @@ import (
 
 type Controller interface {
 	Init(ctx context.Context, respChan chan<- ControllerResponse)
-	Handle(req ControllerCommand)
+	Handle(wg *sync.WaitGroup, req ControllerCommand) bool
 }
 
 // A type of `tea.Msg` intended to forward requests to the controller
@@ -18,40 +18,12 @@ type ControllerCommand struct {
 	Msg        tea.Msg
 }
 
-func (command ControllerCommand) AppendIndex(index int) ControllerCommand {
-	command.IndexChain = append(command.IndexChain, index)
-	return command
-}
-
-func TrackRequest(cmd tea.Cmd, index int) tea.Cmd {
-	if cmd == nil {
-		return nil
-	}
-	return func() tea.Msg {
-		return wrapMsg(cmd(), index)
-	}
-}
-
-func wrapMsg(msg tea.Msg, index int) tea.Msg {
-	switch msg := msg.(type) {
-	case tea.BatchMsg:
-		for i := range len(msg) {
-			msg[i] = TrackRequest(msg[i], index)
-		}
-		return msg
-	case ControllerCommand:
-		return msg.AppendIndex(index)
-	default:
-		return msg
-	}
-}
-
 type ControllerResponse struct {
 	IndexChain []int
 	Msg        tea.Msg
 }
 
-// Retrieves indexes from the response in FILO order.
+// Retrieves indexes from the response in FIFO order.
 // If no indexes were left, `hadIndex` will be `false`.
 // `response` contains the response with the current index removed
 func (command ControllerResponse) PopIndex() (index int, hadIndex bool, response ControllerResponse) {
@@ -102,11 +74,11 @@ func StartControllerLoop(
 					return
 				}
 				// Handle request, send response through msgChan to update UI
-				wg.Go(func() {
-					for _, controller := range controllers {
-						controller.Handle(req)
+				for _, controller := range controllers {
+					if controller.Handle(&wg, req) {
+						break
 					}
-				})
+				}
 			case <-ctx.Done():
 				return
 			}

@@ -2,6 +2,7 @@ package browsing
 
 import (
 	"context"
+	"sync"
 
 	contentv1 "github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
@@ -28,24 +29,36 @@ func (aic *ArticleIndexController) Init(
 	aic.respChan = respChan
 }
 
-func (aic *ArticleIndexController) Handle(req controller.ControllerCommand) {
+func (aic *ArticleIndexController) Handle(
+	wg *sync.WaitGroup,
+	req controller.ControllerCommand,
+) bool {
 	switch msg := req.Msg.(type) {
 	case GetArticles:
-		articles, err := aic.client.ListArticles(aic.ctx, contentv1.ListArticlesRequest_builder{
-			Offset: int32(msg.Offset),
-			Limit:  int32(msg.Limit),
-		}.Build())
-		if err != nil {
-			// TODO: Present to user
-			return
-		}
+		wg.Go(func() { aic.HandleListArticles(req, msg) })
+		return true
+	}
+	return false
+}
 
-		aic.respChan <- controller.ControllerResponse{
-			IndexChain: req.IndexChain,
-			Msg: UpdateArticles{
-				GetArticles: msg,
-				Articles:    articles.GetArticles(),
-			},
-		}
+func (aic *ArticleIndexController) HandleListArticles(
+	req controller.ControllerCommand,
+	msg GetArticles,
+) {
+	articles, err := aic.client.ListArticles(aic.ctx, contentv1.ListArticlesRequest_builder{
+		Offset: int32(msg.Offset),
+		Limit:  int32(msg.Limit),
+	}.Build())
+	if err != nil {
+		// TODO: Present to user
+		return
+	}
+
+	aic.respChan <- controller.ControllerResponse{
+		IndexChain: req.IndexChain,
+		Msg: UpdateArticles{
+			GetArticles: msg,
+			Articles:    articles.GetArticles(),
+		},
 	}
 }
