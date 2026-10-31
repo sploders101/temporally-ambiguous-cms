@@ -84,52 +84,71 @@ func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := tabubbles.NewCmdCollector()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
-			return model, tea.Quit
-		}
-		if model.spinner.GetVisibility() {
-			return model, nil
-		}
-		switch model.currentScreen {
-		case ScreenSplash:
-			if msg.String() == "enter" {
-				model.currentScreen = ScreenPosts
-				model.posts.SetVisibility(true, cmds.WithIndex(int(ComponentPosts)))
-			}
-		case ScreenPosts:
-			model.posts.Update(msg, cmds.WithIndex(int(ComponentPosts)))
-		case ScreenArticle:
-			// TODO
-		}
+		model.HandleKeypress(cmds, msg)
 	case tea.WindowSizeMsg:
 		model.SetSize(msg.Width, msg.Height)
 	case controller.ControllerCommand:
+		// This is an event from a child component that was bubbled up to the runtime,
+		// then handed back to us because bubbletea doesn't actually know anything
+		// about the controller. We should relay it to the controller channel.
 		model.controllerIn <- msg
 	case controller.ControllerResponse:
+		// This is a response from the controller, returned from the
+		// `model.listenControllerResponse` `tea.Cmd` function. We should include it
+		// in the commands we return to re-subscribe for more events, then handle the
+		// message itself.
 		cmds.Push(model.listenControllerResponse)
-		if index, ok, msg := msg.PopIndex(); ok {
-			// The event was for someone else
-			switch ComponentIndex(index) {
-			case ComponentSplash:
-				model.splash.Update(msg, cmds.WithIndex(int(ComponentSplash)))
-			case ComponentPosts:
-				model.posts.Update(msg, cmds.WithIndex(int(ComponentPosts)))
-			case ComponentArticle:
-				// TODO
-			case ComponentSpinner:
-				model.spinner.Update(msg, cmds.WithIndex(int(ComponentSpinner)))
-			}
-		} else {
-			// The event was for us
-			switch msg := msg.Msg.(type) {
-			case navigation.DisplaySpinner:
-				model.spinner.SetVisibility(msg.Visibility, cmds.WithIndex(int(ComponentSpinner)))
-			case navigation.DisplayArticle:
-				// TODO
-			}
-		}
+		model.HandleControllerMsg(cmds, msg)
 	}
 	return model, cmds.ToCmd()
+}
+
+func (model *Model) HandleKeypress(cmds tabubbles.CmdCollector, msg tea.KeyMsg) {
+	if msg.String() == "ctrl+c" {
+		cmds.Push(tea.Quit)
+		return
+	}
+	if model.spinner.GetVisibility() {
+		return
+	}
+	switch model.currentScreen {
+	case ScreenSplash:
+		if msg.String() == "enter" {
+			model.currentScreen = ScreenPosts
+			model.posts.SetVisibility(true, cmds.WithIndex(int(ComponentPosts)))
+		}
+	case ScreenPosts:
+		model.posts.Update(msg, cmds.WithIndex(int(ComponentPosts)))
+	case ScreenArticle:
+		// TODO
+	}
+}
+
+func (model *Model) HandleControllerMsg(
+	cmds tabubbles.CmdCollector,
+	msg controller.ControllerResponse,
+) {
+	if index, ok, msg := msg.PopIndex(); ok {
+		// The event was for someone else
+		switch ComponentIndex(index) {
+		case ComponentSplash:
+			model.splash.Update(msg, cmds.WithIndex(int(ComponentSplash)))
+		case ComponentPosts:
+			model.posts.Update(msg, cmds.WithIndex(int(ComponentPosts)))
+		case ComponentArticle:
+			// TODO
+		case ComponentSpinner:
+			model.spinner.Update(msg, cmds.WithIndex(int(ComponentSpinner)))
+		}
+	} else {
+		// The event was for us
+		switch msg := msg.Msg.(type) {
+		case navigation.DisplaySpinner:
+			model.spinner.SetVisibility(msg.Visibility, cmds.WithIndex(int(ComponentSpinner)))
+		case navigation.DisplayArticle:
+			// TODO
+		}
+	}
 }
 
 func (model Model) listenControllerResponse() tea.Msg {
