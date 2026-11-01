@@ -1,12 +1,12 @@
 package spinner
 
 import (
+	"log/slog"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/utilsctrl"
+	"github.com/sploders101/personal-website/pkg/bigstraw"
 	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles"
 )
 
@@ -43,14 +43,8 @@ func New() *Model {
 	}
 }
 
-func (spinner *Model) Init(cmds tabubbles.CmdCollector) {
-	if spinner.visible {
-		cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-			Cancel:   spinner.tickerCancel,
-			Duration: spinner.interval,
-			Msg:      spinner.generation,
-		}))
-	}
+type ticker struct {
+	generation int
 }
 
 func (m *Model) SetTheme(theme tabubbles.Theme) {
@@ -62,41 +56,50 @@ func (m *Model) SetTheme(theme tabubbles.Theme) {
 	m.messageStyle = lipgloss.NewStyle().Foreground(theme.TextColor)
 }
 
-func (spinner *Model) SetVisibility(visible bool, cmds tabubbles.CmdCollector) {
+func (spinner *Model) SetVisibility(visible bool, cmds bigstraw.CmdCollector) {
+	slog.Debug("Set visibility", "visibility", visible)
 	switch {
 	case spinner.visible && !visible:
 		close(spinner.tickerCancel)
 		spinner.generation += 1
-		spinner.visible = visible
 	case !spinner.visible && visible:
 		spinner.tickerCancel = make(chan struct{})
-		spinner.visible = visible
-		cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-			Cancel:   spinner.tickerCancel,
-			Duration: spinner.interval,
-			Msg:      spinner.generation,
-		}))
+		cmds.AddNotifySelf(spinner.getTicker())
 	}
+	spinner.visible = visible
 }
 
 func (spinner *Model) GetVisibility() bool {
 	return spinner.visible
 }
 
-func (spinner *Model) Update(msg tea.Msg, cmds tabubbles.CmdCollector) {
+func (spinner *Model) Update(msg tea.Msg, cmds bigstraw.CmdCollector) {
 	switch msg := msg.(type) {
-	case controller.ControllerResponse:
-		switch msg := msg.Msg.(type) {
-		case utilsctrl.TickerResponse:
-			if generation, ok := msg.Msg.(int); !ok || generation != spinner.generation {
-				return
-			}
+	case bigstraw.InitMsg:
+		if spinner.visible {
+			spinner.tickerCancel = make(chan struct{})
+			cmds.AddNotifySelf(spinner.getTicker())
+		}
+	case ticker:
+		if spinner.visible && msg.generation == spinner.generation {
 			spinner.frameIndex += 1 // renderers will do their own modulo
-			cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-				Cancel:   spinner.tickerCancel,
-				Duration: spinner.interval,
-				Msg:      spinner.generation,
-			}))
+			cmds.AddNotifySelf(spinner.getTicker())
+		}
+	}
+}
+
+func (spinner *Model) getTicker() tea.Cmd {
+	interval := spinner.interval
+	generation := spinner.generation
+	cancelChan := spinner.tickerCancel
+	return func() tea.Msg {
+		select {
+		case <-time.After(interval):
+			return ticker{
+				generation: generation,
+			}
+		case <-cancelChan:
+			return nil
 		}
 	}
 }

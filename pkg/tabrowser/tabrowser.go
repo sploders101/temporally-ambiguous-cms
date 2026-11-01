@@ -5,12 +5,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/navigation"
+	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
+	"github.com/sploders101/personal-website/pkg/bigstraw"
 	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles"
 	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles/article"
 	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles/postlist"
-	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles/spinner"
 	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles/splash"
 )
 
@@ -22,145 +21,82 @@ const (
 	ScreenArticle
 )
 
-type ComponentIndex int
-
 const (
-	ComponentSplash ComponentIndex = iota
+	ComponentSplash = iota
 	ComponentPosts
 	ComponentArticle
-	ComponentSpinner
 )
 
 type Model struct {
-	controllerIn  chan<- controller.ControllerCommand
-	controllerOut <-chan controller.ControllerResponse
 	width         int
 	height        int
 	currentScreen ScreenIndex
 	splash        *splash.Model
 	posts         *postlist.Model
-	spinner       *spinner.Model
 	article       *article.Model
 }
 
-func NewModel(ctx context.Context, controllers []controller.Controller) Model {
-	controllerIn, controllerOut := controller.StartControllerLoop(ctx, controllers)
+func NewModel(ctx context.Context, client contentv1connect.ContentServiceClient) *Model {
 	model := Model{
-		controllerIn:  controllerIn,
-		controllerOut: controllerOut,
 		currentScreen: ScreenSplash,
-		splash:        splash.NewSplashScreen("Temporally Ambiguous Browser"),
-		posts:         postlist.New(),
-		spinner:       spinner.New(),
-		article:       article.New(),
+		splash: splash.NewModel(
+			true,
+			"Temporally Ambiguous Browser",
+			"Press ENTER to continue.",
+		),
+		posts:   postlist.New(ctx, client),
+		article: article.New(),
 	}
 	model.SetTheme(tabubbles.DefaultTheme)
-	return model
+	return &model
 }
 
-func (model Model) Init() tea.Cmd {
-	cmds := tabubbles.NewCmdCollector()
-	cmds.Push(model.listenControllerResponse)
-	model.splash.Init(cmds.WithIndex(int(ComponentSplash)))
-	model.posts.Init(cmds.WithIndex(int(ComponentPosts)))
-	model.spinner.Init(cmds.WithIndex(int(ComponentSpinner)))
-	return cmds.ToCmd()
-}
-
-func (model *Model) SetSize(width int, height int) {
+func (model *Model) SetSize(width int, height int, cmds bigstraw.CmdCollector) {
 	model.width, model.height = width, height
-	model.splash.SetSize(width, height)
-	model.posts.SetSize(width, height)
+	model.splash.SetSize(width, height, cmds)
+	model.posts.SetSize(width, height, cmds)
 }
 
 func (model *Model) SetTheme(theme tabubbles.Theme) {
 	model.splash.SetTheme(theme)
 	model.posts.SetTheme(theme)
-	model.spinner.SetTheme(theme)
 	model.article.SetTheme(theme)
 }
 
-func (model Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	cmds := tabubbles.NewCmdCollector()
+func (model *Model) Update(msg tea.Msg, cmds bigstraw.CmdCollector) {
+	cmds = cmds.DesignateAs("navigator")
+	msg = bigstraw.HandleMsg(msg, cmds, map[int]bigstraw.Component{
+		ComponentSplash:  model.splash,
+		ComponentPosts:   model.posts,
+		ComponentArticle: model.article,
+	})
 	switch msg := msg.(type) {
+	case postlist.NavigateArticle:
 	case tea.KeyMsg:
-		model.HandleKeypress(cmds, msg)
-	case tea.WindowSizeMsg:
-		model.SetSize(msg.Width, msg.Height)
-	case controller.ControllerCommand:
-		// This is an event from a child component that was bubbled up to the runtime,
-		// then handed back to us because bubbletea doesn't actually know anything
-		// about the controller. We should relay it to the controller channel.
-		model.controllerIn <- msg
-	case controller.ControllerResponse:
-		// This is a response from the controller, returned from the
-		// `model.listenControllerResponse` `tea.Cmd` function. We should include it
-		// in the commands we return to re-subscribe for more events, then handle the
-		// message itself.
-		cmds.Push(model.listenControllerResponse)
-		model.HandleControllerMsg(cmds, msg)
+		model.HandleKeypress(msg, cmds)
 	}
-	return model, cmds.ToCmd()
 }
 
-func (model *Model) HandleKeypress(cmds tabubbles.CmdCollector, msg tea.KeyMsg) {
+func (model *Model) HandleKeypress(msg tea.KeyMsg, cmds bigstraw.CmdCollector) {
 	if msg.String() == "ctrl+c" {
-		cmds.Push(tea.Quit)
-		return
-	}
-	if model.spinner.GetVisibility() {
+		cmds.Add(tea.Quit)
 		return
 	}
 	switch model.currentScreen {
 	case ScreenSplash:
 		if msg.String() == "enter" {
 			model.currentScreen = ScreenPosts
-			model.posts.SetVisibility(true, cmds.WithIndex(int(ComponentPosts)))
+			model.splash.SetVisibility(false, cmds.WithIndex(ComponentSplash))
+			model.posts.SetVisibility(true, cmds.WithIndex(ComponentPosts))
 		}
 	case ScreenPosts:
-		model.posts.Update(msg, cmds.WithIndex(int(ComponentPosts)))
+		model.posts.Update(msg, cmds.WithIndex(ComponentPosts))
 	case ScreenArticle:
 		// TODO
 	}
 }
 
-func (model *Model) HandleControllerMsg(
-	cmds tabubbles.CmdCollector,
-	msg controller.ControllerResponse,
-) {
-	if index, ok, msg := msg.PopIndex(); ok {
-		// The event was for someone else
-		switch ComponentIndex(index) {
-		case ComponentSplash:
-			model.splash.Update(msg, cmds.WithIndex(int(ComponentSplash)))
-		case ComponentPosts:
-			model.posts.Update(msg, cmds.WithIndex(int(ComponentPosts)))
-		case ComponentArticle:
-			// TODO
-		case ComponentSpinner:
-			model.spinner.Update(msg, cmds.WithIndex(int(ComponentSpinner)))
-		}
-	} else {
-		// The event was for us
-		switch msg := msg.Msg.(type) {
-		case navigation.DisplaySpinner:
-			model.spinner.SetVisibility(msg.Visibility, cmds.WithIndex(int(ComponentSpinner)))
-		case navigation.DisplayArticle:
-			// TODO
-		}
-	}
-}
-
-func (model Model) listenControllerResponse() tea.Msg {
-	update, ok := <-model.controllerOut
-	if !ok {
-		return nil
-	}
-	return update
-}
-
-func (model Model) View() tea.View {
-
+func (model *Model) View() tea.View {
 	compositor := lipgloss.NewCompositor()
 	switch model.currentScreen {
 	case ScreenSplash:
@@ -171,17 +107,8 @@ func (model Model) View() tea.View {
 		// TODO
 	}
 
-	if model.spinner.GetVisibility() {
-		compositor.AddLayers(centerLayer(model.width, model.height, model.spinner.View()))
-	}
-
 	view := tea.NewView(lipgloss.NewCanvas(model.width, model.height).Compose(compositor).Render())
 	view.AltScreen = true
 
 	return view
-}
-
-func centerLayer(width, height int, layer string) *lipgloss.Layer {
-	layerWidth, layerHeight := lipgloss.Size(layer)
-	return lipgloss.NewLayer(layer).X(width/2 - layerWidth/2).Y(height/2 - layerHeight/2)
 }

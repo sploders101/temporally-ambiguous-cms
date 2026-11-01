@@ -5,8 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/utilsctrl"
+	"github.com/sploders101/personal-website/pkg/bigstraw"
 	"github.com/sploders101/personal-website/pkg/tabrowser/tabubbles"
 )
 
@@ -18,41 +17,69 @@ const (
 const (
 	tickDuration  time.Duration = time.Second / 40
 	blinkDuration time.Duration = time.Second
-	splashText    string        = "Temporally Ambiguous Browser"
-	splashTrailer string        = "Press ENTER to continue."
 	splashPause   time.Duration = time.Second
 )
 
-var splashTicksTotal = len(splashText) + 2 /* \n\n */ + len(splashTrailer)
-
 type Model struct {
+	visible          bool
+	generation       int
 	width            int
 	height           int
 	textOffset       int
 	cursorVisibility bool
+	topText          string
+	bottomText       string
+	splashTicksTotal int
 	splashText       lipgloss.Style
 	splashTrailer    lipgloss.Style
 	cursor           lipgloss.Style
 }
 
-func NewSplashScreen(text string) *Model {
+func NewModel(visible bool, topText string, bottomText string) *Model {
 	return &Model{
+		visible:          true,
 		cursorVisibility: true,
+		topText:          topText,
+		bottomText:       bottomText,
+		splashTicksTotal: len(topText) + 2 /* \n\n */ + len(bottomText),
 	}
 }
 
-func (model *Model) Init(cmds tabubbles.CmdCollector) {
-	cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-		Duration: blinkDuration,
-		Msg:      TickCursor,
-	}))
-	cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-		Duration: tickDuration,
-		Msg:      TickText,
-	}))
+type tickCursor struct {
+	generation int
+}
+type tickText struct {
+	generation int
 }
 
-func (model *Model) SetSize(width int, height int) {
+func cursorTicker(generation int) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(blinkDuration)
+		return tickCursor{generation}
+	}
+}
+func textTicker(generation int, duration time.Duration) tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(duration)
+		return tickText{generation}
+	}
+}
+
+func (model *Model) SetVisibility(visible bool, cmds bigstraw.CmdCollector) {
+	switch {
+	case model.visible && !visible:
+		model.generation += 1
+		model.visible = false
+	case !model.visible && visible:
+		model.textOffset = 0
+		model.cursorVisibility = false
+		cmds.AddNotifySelf(cursorTicker(model.generation))
+		cmds.AddNotifySelf(textTicker(model.generation, tickDuration))
+	}
+	model.visible = visible
+}
+
+func (model *Model) SetSize(width int, height int, cmds bigstraw.CmdCollector) {
 	model.width = width
 	model.height = height
 }
@@ -63,57 +90,47 @@ func (model *Model) SetTheme(theme tabubbles.Theme) {
 	model.splashTrailer = lipgloss.NewStyle().Foreground(theme.MutedColor)
 }
 
-func (model *Model) Update(msg tea.Msg, cmds tabubbles.CmdCollector) {
+func (model *Model) Update(msg tea.Msg, cmds bigstraw.CmdCollector) {
+	msg = bigstraw.HandleMsg(msg, cmds, nil)
 	switch msg := msg.(type) {
-	case controller.ControllerResponse:
-		_, ok, msg := msg.PopIndex()
-		if ok {
-			return
+	case bigstraw.InitMsg:
+		model.visible = !model.visible
+		model.SetVisibility(!model.visible, cmds)
+	case tickCursor:
+		if msg.generation == model.generation {
+			model.cursorVisibility = !model.cursorVisibility
+			cmds.AddNotifySelf(cursorTicker(model.generation))
 		}
-		switch msg := msg.Msg.(type) {
-		case utilsctrl.TickerResponse:
-			if msg, ok := msg.Msg.(int); ok {
-				switch msg {
-				case TickCursor:
-					model.cursorVisibility = !model.cursorVisibility
-					cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-						Duration: blinkDuration,
-						Msg:      TickCursor,
-					}))
-				case TickText:
-					model.textOffset += 1
-					if model.textOffset == len(splashText) {
-						cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-							Duration: splashPause,
-							Msg:      TickText,
-						}))
-					} else if model.textOffset < splashTicksTotal {
-						cmds.Push(controller.CallController(utilsctrl.TickerRequest{
-							Duration: tickDuration,
-							Msg:      TickText,
-						}))
-					}
-				}
+	case tickText:
+		if msg.generation == model.generation {
+			model.textOffset += 1
+			if model.textOffset == len(model.topText) {
+				cmds.AddNotifySelf(textTicker(model.generation, splashPause))
+			} else if model.textOffset < model.splashTicksTotal {
+				cmds.AddNotifySelf(textTicker(model.generation, tickDuration))
 			}
 		}
 	}
 }
 
 func (model *Model) View() string {
-	splashTextEnd := min(len(splashText), model.textOffset)
+	if !model.visible {
+		return ""
+	}
+	splashTextEnd := min(len(model.topText), model.textOffset)
 	var totalStr string
-	if model.cursorVisibility && model.textOffset <= len(splashText) {
+	if model.cursorVisibility && model.textOffset <= len(model.topText) {
 		totalStr = " "
 	}
-	totalStr += model.splashText.Render(splashText[:splashTextEnd])
+	totalStr += model.splashText.Render(model.topText[:splashTextEnd])
 
-	if model.textOffset > len(splashText) {
-		totalStr += "\n\n"[:min(2, model.textOffset-len(splashText))]
-		trailerIdx := max(0, model.textOffset-len(splashText)-2)
+	if model.textOffset > len(model.topText) {
+		totalStr += "\n\n"[:min(2, model.textOffset-len(model.topText))]
+		trailerIdx := max(0, model.textOffset-len(model.topText)-2)
 		if model.cursorVisibility && trailerIdx > 0 {
 			totalStr += " "
 		}
-		totalStr += model.splashTrailer.Render(splashTrailer[:trailerIdx])
+		totalStr += model.splashTrailer.Render(model.bottomText[:trailerIdx])
 	}
 
 	if model.cursorVisibility {

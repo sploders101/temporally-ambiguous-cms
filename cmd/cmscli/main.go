@@ -14,11 +14,8 @@ import (
 	"github.com/sploders101/personal-website/internal/env"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/cms/v1/cmsv1connect"
 	"github.com/sploders101/personal-website/internal/gen/proto/com/shaunkeys/content/v1/contentv1connect"
+	"github.com/sploders101/personal-website/pkg/bigstraw"
 	"github.com/sploders101/personal-website/pkg/tabrowser"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/browsing"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/navigation"
-	"github.com/sploders101/personal-website/pkg/tabrowser/controller/modules/utilsctrl"
 	"github.com/urfave/cli/v3"
 )
 
@@ -94,12 +91,8 @@ func main() {
 							cfg.Endpoint,
 						)
 
-						model := tabrowser.NewModel(ctx, []controller.Controller{
-							browsing.NewArticleIndexController(client),
-							navigation.NewNavigationController(client),
-							utilsctrl.NewUtilityController(),
-						})
-						p := tea.NewProgram(model)
+						model := tabrowser.NewModel(ctx, client)
+						p := tea.NewProgram(bigstraw.NewAppRoot(model))
 						if _, err := p.Run(); err != nil {
 							return err
 						}

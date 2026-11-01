@@ -14,6 +14,10 @@ var DefaultTheme = Theme{
 	MutedColor:     lipgloss.Color("#404040"),
 }
 
+type Themable interface {
+	SetTheme(theme Theme)
+}
+
 type Theme struct {
 	PrimaryColor   color.Color
 	SecondaryColor color.Color
